@@ -580,6 +580,82 @@ def handle_chitchat(ctx: 'MessageContext', match: Optional[Match]) -> bool:
         ctx.send_text("抱歉，我现在无法进行对话。")
         return False
     
+    # ---- 处理引用图片情况 ----
+    if getattr(ctx, 'is_quoted_image', False):
+        ctx.logger.info("检测到引用图片消息，尝试处理图片内容...")
+        
+        import os
+        from ai_providers.ai_chatgpt import ChatGPT
+        
+        # 确保是 ChatGPT 类型且支持图片处理
+        support_vision = False
+        if isinstance(chat_model, ChatGPT):
+            if hasattr(chat_model, 'support_vision') and chat_model.support_vision:
+                support_vision = True
+            else:
+                # 检查模型名称判断是否支持视觉
+                if hasattr(chat_model, 'model'):
+                    model_name = getattr(chat_model, 'model', '')
+                    support_vision = model_name == "gpt-4.1-mini" or model_name == "gpt-4o" or "-vision" in model_name
+        
+        if not support_vision:
+            ctx.send_text("抱歉，当前 AI 模型不支持处理图片。请联系管理员配置支持视觉的模型 (如 gpt-4-vision-preview、gpt-4o 等)。")
+            return True
+        
+        # 下载图片并处理
+        try:
+            # 创建临时目录
+            temp_dir = "temp/image_cache"
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            # 下载图片
+            ctx.logger.info(f"正在下载引用图片: msg_id={ctx.quoted_msg_id}")
+            image_path = ctx.wcf.download_image(
+                id=ctx.quoted_msg_id,
+                extra=ctx.quoted_image_extra,
+                dir=temp_dir,
+                timeout=30
+            )
+            
+            if not image_path or not os.path.exists(image_path):
+                ctx.logger.error(f"图片下载失败: {image_path}")
+                ctx.send_text("抱歉，无法下载图片进行分析。")
+                return True
+            
+            ctx.logger.info(f"图片下载成功: {image_path}，准备分析...")
+            
+            # 调用 ChatGPT 分析图片
+            try:
+                # 根据用户的提问构建 prompt
+                prompt = ctx.text
+                if not prompt or prompt.strip() == "":
+                    prompt = "请详细描述这张图片中的内容"
+                
+                # 调用图片分析函数
+                response = chat_model.get_image_description(image_path, prompt)
+                ctx.send_text(response)
+                
+                ctx.logger.info("图片分析完成并已发送回复")
+            except Exception as e:
+                ctx.logger.error(f"分析图片时出错: {e}")
+                ctx.send_text(f"分析图片时出错: {str(e)}")
+            
+            # 清理临时图片
+            try:
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+                    ctx.logger.info(f"临时图片已删除: {image_path}")
+            except Exception as e:
+                ctx.logger.error(f"删除临时图片出错: {e}")
+            
+            return True  # 已处理，不执行后续的普通文本处理流程
+            
+        except Exception as e:
+            ctx.logger.error(f"处理引用图片过程中出错: {e}")
+            ctx.send_text(f"处理图片时发生错误: {str(e)}")
+            return True  # 已处理，即使出错也不执行后续普通文本处理
+    # ---- 引用图片处理结束 ----
+    
     # 获取消息内容
     content = ctx.text
     sender_name = ctx.sender_name
@@ -587,7 +663,6 @@ def handle_chitchat(ctx: 'MessageContext', match: Optional[Match]) -> bool:
     # 使用XML处理器格式化消息
     if ctx.robot and hasattr(ctx.robot, "xml_processor"):
         # 创建格式化的聊天内容（带有引用消息等）
-        # 原始代码中是从xml_processor获取的
         if ctx.is_group:
             # 处理群聊消息
             msg_data = ctx.robot.xml_processor.extract_quoted_message(ctx.msg)

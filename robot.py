@@ -541,6 +541,11 @@ class Robot(Job):
         is_at_bot = False
         pure_text = msg.content  # 默认使用原始内容
         
+        # 初始化引用图片相关属性
+        is_quoted_image = False
+        quoted_msg_id = None
+        quoted_image_extra = None
+        
         # 处理引用消息等特殊情况
         if msg.type == 49 and ("<title>" in msg.content or "<appmsg" in msg.content):
             # 尝试提取引用消息中的文本
@@ -564,6 +569,15 @@ class Robot(Job):
                     if is_group and pure_text.startswith(f"@{self.allContacts.get(self.wxid, '')}"):
                         is_at_bot = True
                         pure_text = re.sub(r"^@.*?[\u2005|\s]", "", pure_text).strip()
+            
+            # 检查并提取图片引用信息
+            if msg_data and msg_data.get("media_type") == "引用图片" and \
+               msg_data.get("quoted_msg_id") and \
+               msg_data.get("quoted_image_extra"):
+                is_quoted_image = True
+                quoted_msg_id = msg_data["quoted_msg_id"]
+                quoted_image_extra = msg_data["quoted_image_extra"]
+                self.LOG.info(f"预处理已提取引用图片信息: msg_id={quoted_msg_id}")
         
         # 处理文本消息
         elif msg.type == 1:  # 文本消息
@@ -589,9 +603,15 @@ class Robot(Job):
             is_at_bot=is_at_bot or (is_group and msg.is_at(self.wxid)),  # 确保is_at_bot正确
         )
         
+        # 将图片引用信息添加到 ctx
+        setattr(ctx, 'is_quoted_image', is_quoted_image)
+        if is_quoted_image:
+            setattr(ctx, 'quoted_msg_id', quoted_msg_id)
+            setattr(ctx, 'quoted_image_extra', quoted_image_extra)
+        
         # 获取发送者昵称
         ctx.sender_name = ctx.get_sender_alias_or_name()
         
-        self.LOG.debug(f"预处理消息: text='{ctx.text}', is_group={ctx.is_group}, is_at_bot={ctx.is_at_bot}, sender='{ctx.sender_name}'")
+        self.LOG.debug(f"预处理消息: text='{ctx.text}', is_group={ctx.is_group}, is_at_bot={ctx.is_at_bot}, sender='{ctx.sender_name}', is_quoted_image={is_quoted_image}")
         return ctx
 

@@ -127,11 +127,47 @@ class XmlProcessor:
                 # 提取refermsg内容
                 refer_data = self.extract_refermsg(msg.content)
                 result["quoted_sender"] = refer_data.get("sender", "")
-                result["quoted_content"] = refer_data.get("content", "")
+                
+                # 新增代码开始
+                is_quoted_image = False
+                quoted_msg_id = None
+                quoted_image_extra = None
+                
+                # 尝试从原始消息内容中解析 refermsg 结构，获取引用类型和svrid
+                refermsg_match = re.search(r'<refermsg>(.*?)</refermsg>', msg.content, re.DOTALL)
+                if refermsg_match:
+                    refermsg_inner_xml = refermsg_match.group(1)
+                    refer_type_match = re.search(r'<type>(\d+)</type>', refermsg_inner_xml)
+                    refer_svrid_match = re.search(r'<svrid>(\d+)</svrid>', refermsg_inner_xml)
+                    
+                    if refer_type_match and refer_type_match.group(1) == '3' and refer_svrid_match:
+                        # 确认是引用图片 (type=3)
+                        is_quoted_image = True
+                        try:
+                            quoted_msg_id = int(refer_svrid_match.group(1))
+                            # refer_data["raw_content"] 应该就是解码后的 <msg><img...> XML
+                            quoted_image_extra = refer_data.get("raw_content", "")
+                            self.logger.info(f"识别到引用图片消息，原消息ID: {quoted_msg_id}")
+                        except ValueError:
+                            self.logger.error(f"无法将svrid '{refer_svrid_match.group(1)}' 转换为整数")
+                        except Exception as e:
+                            self.logger.error(f"提取引用图片信息时出错: {e}")
+
+                if is_quoted_image and quoted_msg_id is not None and quoted_image_extra:
+                    # 如果是引用图片，更新 result 字典
+                    result["media_type"] = "引用图片"         # 更新媒体类型
+                    result["quoted_msg_id"] = quoted_msg_id  # 存储原图片消息 ID
+                    result["quoted_image_extra"] = quoted_image_extra # 存储原图片消息 XML (用于下载)
+                    result["quoted_content"] = "[引用的图片]" # 使用占位符文本
+                    result["quoted_is_card"] = False # 明确不是卡片
+                else:
+                    # 原有的代码继续
+                    result["quoted_content"] = refer_data.get("content", "")
+                # 新增代码结束
                 
                 # 从raw_content尝试解析被引用内容的卡片信息
                 raw_content = refer_data.get("raw_content", "")
-                if raw_content and "<appmsg" in raw_content:
+                if raw_content and "<appmsg" in raw_content and not is_quoted_image: # 添加了 not is_quoted_image 条件
                     quoted_card_details = self.extract_card_details(raw_content)
                     
                     # 将引用的卡片详情存储到quoted_前缀的字段
@@ -150,7 +186,7 @@ class XmlProcessor:
                     self.logger.info(f"成功从引用内容中提取卡片信息: {quoted_card_details['card_type']}")
                 else:
                     # 如果未发现卡片特征，尝试fallback方法
-                    if not result["quoted_content"]:
+                    if not result["quoted_content"] and not is_quoted_image: # 添加了 not is_quoted_image 条件
                         fallback_content = self.extract_quoted_fallback(msg.content)
                         if fallback_content:
                             if fallback_content.startswith("引用内容:") or fallback_content.startswith("相关内容:"):
@@ -285,11 +321,47 @@ class XmlProcessor:
                 # 提取refermsg内容
                 refer_data = self.extract_private_refermsg(msg.content)
                 result["quoted_sender"] = refer_data.get("sender", "")
-                result["quoted_content"] = refer_data.get("content", "")
+                
+                # 新增代码开始
+                is_quoted_image = False
+                quoted_msg_id = None
+                quoted_image_extra = None
+                
+                # 尝试从原始消息内容中解析 refermsg 结构，获取引用类型和svrid
+                refermsg_match = re.search(r'<refermsg>(.*?)</refermsg>', msg.content, re.DOTALL)
+                if refermsg_match:
+                    refermsg_inner_xml = refermsg_match.group(1)
+                    refer_type_match = re.search(r'<type>(\d+)</type>', refermsg_inner_xml)
+                    refer_svrid_match = re.search(r'<svrid>(\d+)</svrid>', refermsg_inner_xml)
+                    
+                    if refer_type_match and refer_type_match.group(1) == '3' and refer_svrid_match:
+                        # 确认是引用图片 (type=3)
+                        is_quoted_image = True
+                        try:
+                            quoted_msg_id = int(refer_svrid_match.group(1))
+                            # refer_data["raw_content"] 应该就是解码后的 <msg><img...> XML
+                            quoted_image_extra = refer_data.get("raw_content", "")
+                            self.logger.info(f"识别到引用图片消息，原消息ID: {quoted_msg_id}")
+                        except ValueError:
+                            self.logger.error(f"无法将svrid '{refer_svrid_match.group(1)}' 转换为整数")
+                        except Exception as e:
+                            self.logger.error(f"提取引用图片信息时出错: {e}")
+
+                if is_quoted_image and quoted_msg_id is not None and quoted_image_extra:
+                    # 如果是引用图片，更新 result 字典
+                    result["media_type"] = "引用图片"         # 更新媒体类型
+                    result["quoted_msg_id"] = quoted_msg_id  # 存储原图片消息 ID
+                    result["quoted_image_extra"] = quoted_image_extra # 存储原图片消息 XML (用于下载)
+                    result["quoted_content"] = "[引用的图片]" # 使用占位符文本
+                    result["quoted_is_card"] = False # 明确不是卡片
+                else:
+                    # 原有的代码继续
+                    result["quoted_content"] = refer_data.get("content", "")
+                # 新增代码结束
                 
                 # 从raw_content尝试解析被引用内容的卡片信息
                 raw_content = refer_data.get("raw_content", "")
-                if raw_content and "<appmsg" in raw_content:
+                if raw_content and "<appmsg" in raw_content and not is_quoted_image: # 添加了 not is_quoted_image 条件
                     quoted_card_details = self.extract_card_details(raw_content)
                     
                     # 将引用的卡片详情存储到quoted_前缀的字段
@@ -308,7 +380,7 @@ class XmlProcessor:
                     self.logger.info(f"成功从引用内容中提取卡片信息: {quoted_card_details['card_type']}")
                 else:
                     # 如果未发现卡片特征，尝试fallback方法
-                    if not result["quoted_content"]:
+                    if not result["quoted_content"] and not is_quoted_image: # 添加了 not is_quoted_image 条件
                         fallback_content = self.extract_quoted_fallback(msg.content)
                         if fallback_content:
                             if fallback_content.startswith("引用内容:") or fallback_content.startswith("相关内容:"):
