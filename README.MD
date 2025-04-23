@@ -293,7 +293,7 @@ A: 检查 wcferry 服务是否正常运行，查看日志文件了解详细错�
 如有任何问题或建议，请通过以下方式联系我们：
 
 - GitHub Issues: [提交问题](https://github.com/zippland/Bubbles-WechatAI/issues)
-- Email: zylanjian@example.com
+- Email: zylanjian@outlook.com
 
 ---
 
