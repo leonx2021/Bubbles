@@ -76,98 +76,6 @@ COMMANDS = [
         description="从数据库中清除群聊的历史消息记录"
     ),
     
-    # ======== 新闻和实用工具 ========
-    Command(
-        name="weather_forecast",
-        pattern=re.compile(r"^(?:天气预报|预报)\s+(.+)$"), # 匹配 天气预报/预报 城市名
-        scope="both",      # 群聊和私聊都支持
-        need_at=True,      # 需要@机器人
-        priority=38,       # 优先级比天气高一点
-        handler=handle_weather_forecast,
-        description="查询指定城市未来几天的天气预报 (例如：天气预报 北京)"
-    ),
-    
-    Command(
-        name="weather",
-        pattern=re.compile(r"^(?:天气|温度)\s+(.+)$"), # 匹配 天气/温度 城市名
-        scope="both",      # 群聊和私聊都支持
-        need_at=True,      # 需要@机器人
-        priority=39,       # 优先级设置在新闻命令前
-        handler=handle_weather,
-        description="查询指定城市的天气 (例如：天气 北京)"
-    ),
-    
-    Command(
-        name="news",
-        pattern=re.compile(r"^新闻$"),
-        scope="both",       # 群聊和私聊都支持
-        need_at=True,      # 需要@机器人
-        priority=40,        # 优先级一般
-        handler=handle_news_request,
-        description="获取最新新闻"
-    ),
-    
-    # ======== 决斗系统命令 ========
-    Command(
-        name="duel",
-        pattern=re.compile(r"决斗.*?(?:@|[与和])\s*([^\s@]+)"),
-        scope="group",      # 仅群聊支持
-        need_at=False,      # 不需要@机器人
-        priority=50,        # 优先级较低
-        handler=handle_duel,
-        description="发起决斗"
-    ),
-    
-    Command(
-        name="sneak_attack",
-        pattern=re.compile(r"(?:偷袭|偷分).*?@([^\s@]+)"),
-        scope="group",      # 仅群聊支持
-        need_at=False,      # 不需要@机器人
-        priority=51,        # 优先级较低
-        handler=handle_sneak_attack,
-        description="偷袭其他玩家"
-    ),
-    
-    Command(
-        name="duel_rank",
-        pattern=re.compile(r"^(决斗排行|决斗排名|排行榜)$"),
-        scope="group",      # 仅群聊支持
-        need_at=True,      # 不需要@机器人
-        priority=52,        # 优先级较低
-        handler=handle_duel_rank,
-        description="查看决斗排行榜"
-    ),
-    
-    Command(
-        name="duel_stats",
-        pattern=re.compile(r"^(决斗战绩|我的战绩|战绩查询)(.*)$"),
-        scope="group",      # 仅群聊支持
-        need_at=True,      # 不需要@机器人
-        priority=53,        # 优先级较低
-        handler=handle_duel_stats,
-        description="查看决斗战绩"
-    ),
-    
-    Command(
-        name="check_equipment",
-        pattern=re.compile(r"^(我的装备|查看装备)$"),
-        scope="group",      # 仅群聊支持
-        need_at=True,      # 不需要@机器人
-        priority=54,        # 优先级较低
-        handler=handle_check_equipment,
-        description="查看我的装备"
-    ),
-    
-    Command(
-        name="rename",
-        pattern=re.compile(r"^改名\s+([^\s]+)\s+([^\s]+)$"),
-        scope="group",      # 仅群聊支持
-        need_at=True,      # 不需要@机器人
-        priority=55,        # 优先级较低
-        handler=handle_rename,
-        description="更改昵称"
-    ),
-    
     # ======== 提醒功能 ========
     Command(
         name="reminder",
@@ -199,6 +107,98 @@ COMMANDS = [
         handler=handle_delete_reminder,
         description="删除提醒 (包含'删'和'提醒'关键字即可，如: 把开会的提醒删了)"
     ),
+
+    # ======== 新闻和实用工具 ========
+    Command(
+        name="weather_forecast",
+        pattern=re.compile(r"^(?:天气预报|预报)\s+(.+)$"), # 匹配 天气预报/预报 城市名
+        scope="both",      # 群聊和私聊都支持
+        need_at=True,      # 需要@机器人
+        priority=38,       # 优先级比天气高一点
+        handler=handle_weather_forecast,
+        description="查询指定城市未来几天的天气预报 (例如：天气预报 北京)"
+    ),
+    
+    Command(
+        name="weather",
+        pattern=re.compile(r"^(?:天气|温度)\s+(.+)$"), # 匹配 天气/温度 城市名
+        scope="both",      # 群聊和私聊都支持
+        need_at=True,      # 需要@机器人
+        priority=39,       # 优先级设置在新闻命令前
+        handler=handle_weather,
+        description="查询指定城市的天气 (例如：天气 北京)"
+    ),
+    
+    Command(
+        name="news",
+        pattern=re.compile(r"^新闻$"),
+        scope="both",       # 群聊和私聊都支持
+        need_at=True,      # 需要@机器人
+        priority=40,        # 优先级一般
+        handler=handle_news_request,
+        description="获取最新新闻"
+    ),
+    
+    # # ======== 决斗系统命令 ========
+    # Command(
+    #     name="duel",
+    #     pattern=re.compile(r"决斗.*?(?:@|[与和])\s*([^\s@]+)"),
+    #     scope="group",      # 仅群聊支持
+    #     need_at=False,      # 不需要@机器人
+    #     priority=50,        # 优先级较低
+    #     handler=handle_duel,
+    #     description="发起决斗"
+    # ),
+    
+    # Command(
+    #     name="sneak_attack",
+    #     pattern=re.compile(r"(?:偷袭|偷分).*?@([^\s@]+)"),
+    #     scope="group",      # 仅群聊支持
+    #     need_at=False,      # 不需要@机器人
+    #     priority=51,        # 优先级较低
+    #     handler=handle_sneak_attack,
+    #     description="偷袭其他玩家"
+    # ),
+    
+    # Command(
+    #     name="duel_rank",
+    #     pattern=re.compile(r"^(决斗排行|决斗排名|排行榜)$"),
+    #     scope="group",      # 仅群聊支持
+    #     need_at=True,      # 不需要@机器人
+    #     priority=52,        # 优先级较低
+    #     handler=handle_duel_rank,
+    #     description="查看决斗排行榜"
+    # ),
+    
+    # Command(
+    #     name="duel_stats",
+    #     pattern=re.compile(r"^(决斗战绩|我的战绩|战绩查询)(.*)$"),
+    #     scope="group",      # 仅群聊支持
+    #     need_at=True,      # 不需要@机器人
+    #     priority=53,        # 优先级较低
+    #     handler=handle_duel_stats,
+    #     description="查看决斗战绩"
+    # ),
+    
+    # Command(
+    #     name="check_equipment",
+    #     pattern=re.compile(r"^(我的装备|查看装备)$"),
+    #     scope="group",      # 仅群聊支持
+    #     need_at=True,      # 不需要@机器人
+    #     priority=54,        # 优先级较低
+    #     handler=handle_check_equipment,
+    #     description="查看我的装备"
+    # ),
+    
+    # Command(
+    #     name="rename",
+    #     pattern=re.compile(r"^改名\s+([^\s]+)\s+([^\s]+)$"),
+    #     scope="group",      # 仅群聊支持
+    #     need_at=True,      # 不需要@机器人
+    #     priority=55,        # 优先级较低
+    #     handler=handle_rename,
+    #     description="更改昵称"
+    # ),
 ]
 
 # 可以添加一个函数，获取命令列表的简单描述
