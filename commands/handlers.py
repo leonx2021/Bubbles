@@ -825,12 +825,12 @@ def handle_perplexity_ask(ctx: 'MessageContext', match: Optional[Match]) -> bool
 
 def handle_reminder(ctx: 'MessageContext', match: Optional[Match]) -> bool:
     """处理来自私聊或群聊的 '提醒' 命令"""
-    # 2. 获取用户输入的提醒内容（现在包含"提醒"字样）
-    raw_text = match.group(1).strip()
-    if not raw_text or raw_text == "提醒":
+    # 2. 获取用户输入的提醒内容 (现在从完整消息获取)
+    raw_text = ctx.msg.content.strip() # 修改：从 ctx.msg.content 获取
+    if not raw_text: # 修改：仅检查是否为空
         # 在群聊中@用户回复
         at_list = ctx.msg.sender if ctx.is_group else ""
-        ctx.send_text("请告诉我需要提醒什么内容和时间呀~ (例如：提醒 明天下午3点 开会 或 提醒我早上七点起床)", at_list)
+        ctx.send_text("请告诉我需要提醒什么内容和时间呀~ (例如：提醒我明天下午3点开会)", at_list) # 修改示例
         return True
 
     # 3. 构造给 AI 的 Prompt

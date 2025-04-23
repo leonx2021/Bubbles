@@ -1165,7 +1165,7 @@ def change_player_name(old_name: str, new_name: str, group_id=None) -> str:
         result = rank_system.change_player_name(old_name, new_name)
         
         if result:
-            return f"✅ 已成功将本群中的玩家 \"{old_name}\" 改名为 \"{new_name}\""
+            return f"✅ 已成功将决斗记录中的玩家 \"{old_name}\" 重命名为 \"{new_name}\""
         else:
             return f"❌ 改名失败：请确认 \"{old_name}\" 在本群中有战绩记录，且 \"{new_name}\" 名称未被使用"
     except Exception as e:

@@ -171,12 +171,12 @@ COMMANDS = [
     # ======== 提醒功能 ========
     Command(
         name="reminder",
-        pattern=re.compile(r"^(提醒\s*.+)$", re.IGNORECASE | re.DOTALL), # 匹配"提醒"开头（可无空格），捕获包括"提醒"在内的完整内容
+        pattern=re.compile(r"提醒我", re.IGNORECASE),
         scope="both",    # 支持群聊和私聊
         need_at=True,    # 在群聊中需要@机器人
         priority=35,        # 优先级适中，在基础命令后，复杂功能或闲聊前
         handler=handle_reminder,
-        description="设置一个提醒 (例如：提醒 明天下午3点 开会 或 提醒我早上七点起床)"
+        description="设置一个提醒 (包含 '提醒我' 关键字即可, 例如：提醒我明天下午3点开会)"
     ),
     
     Command(
