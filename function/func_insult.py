@@ -102,7 +102,6 @@ def handle_insult_request(
     logger, 
     bot_wxid: str, 
     send_text_func: Callable[[str, str, Optional[str]], None], 
-    trigger_goblin_gift_func: Callable[[object], None],
     msg,
     target_mention_name: str
 ) -> bool:
@@ -114,7 +113,6 @@ def handle_insult_request(
         logger: 日志记录器。
         bot_wxid: 机器人自身的 wxid。
         send_text_func: 发送文本消息的函数 (content, receiver, at_list=None)。
-        trigger_goblin_gift_func: 触发哥布林馈赠的函数。
         msg: 原始消息对象 (需要 .roomid 属性)。
         target_mention_name: 从消息中提取的被@用户的名称。
 
@@ -153,9 +151,6 @@ def handle_insult_request(
         insult_text = generate_random_insult(actual_target_name)
         send_text_func(insult_text, msg.roomid)
         logger.info(f"已发送骂人消息至群 {msg.roomid}，目标: {actual_target_name}")
-        
-        if trigger_goblin_gift_func:
-             trigger_goblin_gift_func(msg)
         
     except Exception as e:
          logger.error(f"生成或发送骂人消息时出错: {e}")

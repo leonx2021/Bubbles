@@ -32,7 +32,6 @@ from configuration import Config
 from constants import ChatType
 from job_mgmt import Job
 from function.func_xml_process import XmlProcessor
-from function.func_goblin_gift import GoblinGiftManager
 
 # 导入命令路由系统
 from commands.context import MessageContext
@@ -171,9 +170,6 @@ class Robot(Job):
         
         # 初始化图像生成管理器
         self.image_manager = ImageGenerationManager(self.config, self.wcf, self.LOG, self.sendTextMsg)
-                
-        # 初始化古灵阁妖精馈赠管理器
-        self.goblin_gift_manager = GoblinGiftManager(self.config, self.wcf, self.LOG, self.sendTextMsg)
         
         # 初始化命令路由器
         self.command_router = CommandRouter(COMMANDS, robot_instance=self)
@@ -455,18 +451,7 @@ class Robot(Job):
             return self.chat_models[ChatType.PERPLEXITY.value]
             
         return None
-
-    def try_trigger_goblin_gift(self, msg: WxMsg) -> None:
-        """尝试触发古灵阁妖精的馈赠事件
-        
-        用户与机器人互动时，有概率获得随机积分
-        根据配置决定是否启用及在哪些群聊启用
-        
-        Args:
-            msg: 微信消息对象
-        """
-        # 调用管理器的触发方法
-        self.goblin_gift_manager.try_trigger(msg)
+    
 
     def _select_model_for_message(self, msg: WxMsg) -> None:
         """根据消息来源选择对应的AI模型

@@ -162,7 +162,6 @@ GROUP_MODELS:
   weather_report  # 每日天气推送
   report_reminder # 日报周报月报提醒
   image_generation  # AI生图
-  goblin_gift # 古灵阁妖精的馈赠
   perplexity  # perplexity
 ```
 

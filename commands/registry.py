@@ -49,7 +49,7 @@ COMMANDS = [
         name="perplexity_ask",
         pattern=re.compile(r"^ask\s*(.+)", re.IGNORECASE | re.DOTALL),
         scope="both",       # 群聊和私聊都支持
-        need_at=True,      # 需要@机器人
+        need_at=True,       # 需要@机器人
         priority=25,        # 较高优先级，确保在闲聊之前处理
         handler=handle_perplexity_ask,
         description="使用 Perplexity AI 进行深度查询"
@@ -117,16 +117,6 @@ COMMANDS = [
         priority=38,       # 优先级比天气高一点
         handler=handle_weather_forecast,
         description="查询指定城市未来几天的天气预报 (例如：天气预报 北京)"
-    ),
-    
-    Command(
-        name="weather",
-        pattern=re.compile(r"^(?:天气|温度)\s+(.+)$"), # 匹配 天气/温度 城市名
-        scope="both",      # 群聊和私聊都支持
-        need_at=True,      # 需要@机器人
-        priority=39,       # 优先级设置在新闻命令前
-        handler=handle_weather,
-        description="查询指定城市的天气 (例如：天气 北京)"
     ),
     
     Command(
