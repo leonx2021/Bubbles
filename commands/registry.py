@@ -197,7 +197,7 @@ COMMANDS = [
         need_at=True,    # 在群聊中需要@机器人
         priority=37,
         handler=handle_delete_reminder,
-        description="删除指定的提醒 (例如：删除提醒 ID:xxxxxx)"
+        description="删除指定提醒 (可用自然语言描述，如'删掉明天开会的那个'，或用'ID:xxxxxx'，或用'all'删除全部)"
     ),
 ]
 

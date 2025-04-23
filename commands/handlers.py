@@ -563,7 +563,6 @@ def handle_rename(ctx: 'MessageContext', match: Optional[Match]) -> bool:
         ctx.send_text("⚠️ 改名失败")
         return False
 
-
 def handle_chitchat(ctx: 'MessageContext', match: Optional[Match]) -> bool:
     """
     处理闲聊，调用AI模型生成回复
@@ -1093,66 +1092,261 @@ def handle_list_reminders(ctx: 'MessageContext', match: Optional[Match]) -> bool
     return True
 
 def handle_delete_reminder(ctx: 'MessageContext', match: Optional[Match]) -> bool:
-    """处理删除提醒命令（支持群聊和私聊）"""
+    """
+    处理删除提醒命令（支持群聊和私聊）。
+    优先尝试匹配 ID 或 "all"，否则使用 AI 理解自然语言描述。
+    """
     if not hasattr(ctx.robot, 'reminder_manager'):
         ctx.send_text("❌ 内部错误：提醒管理器未初始化。", ctx.msg.sender if ctx.is_group else "")
         return True
 
     user_input_description = match.group(2).strip() # 用户描述要删除哪个提醒
     if not user_input_description:
-        ctx.send_text("请告诉我您想删除哪个提醒（例如：删除提醒 开会的那个 / 删除提醒 ID: xxxxxx）", ctx.msg.sender if ctx.is_group else "")
+        # 如果用户只说了"删除提醒"而没有说删哪个
+        ctx.send_text("请告诉我您想删除哪个提醒（例如：删除提醒 开会的那个 / 删除提醒 ID: xxxxxx / 删除提醒 all）", ctx.msg.sender if ctx.is_group else "")
         return True
 
     # 在群聊中@用户
     at_list = ctx.msg.sender if ctx.is_group else ""
-    
-    # 检查是否要删除所有提醒
-    if user_input_description.lower() == "all" or user_input_description == "所有" or user_input_description == "全部":
+
+    # --- 步骤 1: 检查是否删除所有 ---
+    if user_input_description.lower() in ["all", "所有", "全部"]:
         success, message, count = ctx.robot.reminder_manager.delete_all_reminders(ctx.msg.sender)
         ctx.send_text(message, at_list)
-        
-        # 尝试触发馈赠（如果在群聊中）
-        if ctx.is_group and hasattr(ctx.robot, "goblin_gift_manager"):
+        # 尝试触发馈赠
+        if success and count > 0 and ctx.is_group and hasattr(ctx.robot, "goblin_gift_manager"):
             ctx.robot.goblin_gift_manager.try_trigger(ctx.msg)
-            
         return True
 
-    # 检查用户输入是否直接是 ID (简单可靠)
+    # --- 步骤 2: 尝试直接匹配 ID ---
     potential_id_match = re.match(r"^(?:id[:：\s]*)?([a-f0-9]{6,})$", user_input_description, re.IGNORECASE)
     if potential_id_match:
         partial_id = potential_id_match.group(1)
-        # 需要从数据库查找完整的 ID
-        reminders = ctx.robot.reminder_manager.list_reminders(ctx.msg.sender)
+        reminders = ctx.robot.reminder_manager.list_reminders(ctx.msg.sender) # 获取列表用于查找完整ID
         found_id = None
         possible_matches = 0
-        
+        matched_reminder_content = "" # 记录匹配到的提醒内容
+
         for r in reminders:
             if r['id'].startswith(partial_id):
                 found_id = r['id']
+                matched_reminder_content = r['content'][:30] # 获取部分内容用于反馈
                 possible_matches += 1
 
         if possible_matches == 1:
+            # 精确匹配到一个ID，直接删除
             success, message = ctx.robot.reminder_manager.delete_reminder(ctx.msg.sender, found_id)
-            ctx.send_text(message, at_list)
+            # 在成功消息中包含部分内容，让用户更确定删对了
+            if success:
+                 final_message = f"✅ 已成功删除提醒 (ID: {found_id[:6]}... 内容: \"{matched_reminder_content}...\")"
+            else:
+                 final_message = message # 如果删除失败，显示原始错误信息
+            ctx.send_text(final_message, at_list)
+            # 尝试触发馈赠
+            if success and ctx.is_group and hasattr(ctx.robot, "goblin_gift_manager"):
+                ctx.robot.goblin_gift_manager.try_trigger(ctx.msg)
+            return True # ID 匹配成功，流程结束
         elif possible_matches > 1:
             ctx.send_text(f"❌ 找到多个以 '{partial_id}' 开头的提醒ID，请提供更完整的ID。", at_list)
+            return True # 找到多个，流程结束
         else:
-            ctx.send_text(f"❌ 未找到 ID 以 '{partial_id}' 开头的提醒。您可以使用 '查看提醒' 获取完整列表和ID。", at_list)
-        
-        # 尝试触发馈赠（如果在群聊中）
-        if ctx.is_group and hasattr(ctx.robot, "goblin_gift_manager"):
-            ctx.robot.goblin_gift_manager.try_trigger(ctx.msg)
-            
+            # 看起来像ID，但没找到，此时可以继续尝试 AI（或者提示未找到）
+            # 决定：继续尝试 AI，也许用户输入了错误的 ID 但描述是对的
+            pass # 让流程继续到 AI 部分
+
+    # --- 步骤 3: 如果不是 "all" 且 ID 匹配不成功（或压根不像ID），使用 AI ---
+    reminders = ctx.robot.reminder_manager.list_reminders(ctx.msg.sender)
+    if not reminders:
+        ctx.send_text("您当前没有任何提醒可供删除。", at_list)
         return True
-    
-    # 如果不是ID，则提示用户先查看提醒列表
-    ctx.send_text("请先使用 '查看提醒' 命令获取您的提醒列表，然后使用 '删除提醒 ID:xxxxxx' 的格式删除特定提醒。\n如果要删除所有提醒，请使用 '删除提醒 all'。", at_list)
-    
-    # 尝试触发馈赠（如果在群聊中）
-    if ctx.is_group and hasattr(ctx.robot, "goblin_gift_manager"):
-        ctx.robot.goblin_gift_manager.try_trigger(ctx.msg)
-        
-    return True 
+
+    # 将提醒列表转换为 JSON 字符串给 AI 参考
+    try:
+        reminders_json_str = json.dumps(reminders, ensure_ascii=False, indent=2)
+    except Exception as e:
+         ctx.send_text("❌ 内部错误：准备数据给 AI 时出错。", at_list)
+         if ctx.logger: ctx.logger.error(f"序列化提醒列表失败: {e}", exc_info=True)
+         return True
+
+    # 构造 AI Prompt
+    # 注意：在 prompt 中所有字面量的 { 和 } 都需要转义为 {{ 和 }}
+    sys_prompt = """
+你是提醒删除助手。用户会提出删除提醒的请求，可能是描述内容/时间，也可能是要求删除全部（虽然 'all' 的情况我们已经处理了，但你也要能理解）。我会提供用户的请求原文，以及一个包含该用户所有当前提醒的 JSON 列表。
+
+你的任务是：根据用户请求和提醒列表，判断用户的意图，并确定要删除哪些提醒。
+
+**必须严格**按照以下几种 JSON 格式之一返回结果：
+
+1.  **删除特定提醒:** 如果你能明确匹配到一个或多个特定提醒，返回：
+    ```json
+    {{
+      "action": "delete_specific",
+      "ids": ["<full_reminder_id_1>", "<full_reminder_id_2>", ...]
+    }}
+    ```
+    (`ids` 列表中包含所有匹配到的提醒的 **完整 ID**)
+
+2.  **删除所有提醒:** 如果用户明确表达了删除所有/全部提醒的意图，返回：
+    ```json
+    {{
+      "action": "delete_all"
+    }}
+    ```
+
+3.  **需要澄清:** 如果用户描述模糊，匹配到多个可能的提醒，无法确定具体是哪个，返回：
+    ```json
+    {{
+      "action": "clarify",
+      "message": "抱歉，您的描述可能匹配多个提醒，请问您想删除哪一个？（建议使用 ID 精确删除）",
+      "options": [ {{ "id": "id_prefix_1...", "description": "提醒1的简短描述(如: 周一 09:00 开会)" }}, ... ]
+    }}
+    ```
+    (`message` 是给用户的提示，`options` 包含可能的选项及其简短描述和 ID 前缀)
+
+4.  **未找到:** 如果在列表中找不到任何与用户描述匹配的提醒，返回：
+    ```json
+    {{
+      "action": "not_found",
+      "message": "抱歉，在您的提醒列表中没有找到与您描述匹配的提醒。"
+    }}
+    ```
+
+5.  **错误:** 如果处理中遇到问题或无法理解请求，返回：
+    ```json
+    {{
+      "action": "error",
+      "message": "抱歉，处理您的删除请求时遇到问题。"
+    }}
+    ```
+
+**重要:**
+-   仔细分析用户请求和提供的提醒列表 JSON 进行匹配。
+-   匹配时要综合考虑内容、时间、类型（一次性/每日/每周）等信息。
+-   如果返回 `delete_specific`，必须提供 **完整** 的 reminder ID。
+-   **只输出 JSON 结构，不要包含任何额外的解释性文字。**
+
+用户的提醒列表如下 (JSON 格式):
+{reminders_list_json}
+
+当前时间（供参考）: {current_datetime}
+"""
+    current_dt_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        # 将用户的自然语言请求和提醒列表JSON传入Prompt
+        formatted_prompt = sys_prompt.format(
+            reminders_list_json=reminders_json_str,
+            current_datetime=current_dt_str
+        )
+    except KeyError as e:
+         ctx.send_text("❌ 内部错误：构建 AI 请求时出错。", at_list)
+         if ctx.logger: ctx.logger.error(f"格式化删除提醒 prompt 失败: {e}，可能是 sys_prompt 中的 {{}} 未正确转义", exc_info=True)
+         return True
+
+
+    # 调用 AI
+    q_for_ai = f"请根据以下用户请求，分析需要删除哪个提醒：\n{user_input_description}"
+    try:
+        if not hasattr(ctx, 'chat') or not ctx.chat:
+            raise ValueError("当前上下文中没有可用的AI模型")
+
+        ai_response = ctx.chat.get_answer(q_for_ai, ctx.get_receiver(), system_prompt_override=formatted_prompt)
+
+        # 解析 AI 的 JSON 回复
+        parsed_ai_response = None
+        json_str = None
+        # 优先匹配 {...} 因为我们期望的是一个对象
+        json_match_obj = re.search(r'\{.*\}', ai_response, re.DOTALL)
+        if json_match_obj:
+            json_str = json_match_obj.group(0)
+        else:
+             json_str = ai_response # 没有找到对象，尝试整个解析
+
+        try:
+            parsed_ai_response = json.loads(json_str)
+            if not isinstance(parsed_ai_response, dict) or "action" not in parsed_ai_response:
+                raise ValueError("AI 返回的 JSON 格式不符合预期（缺少 action 字段）")
+        except json.JSONDecodeError:
+             ctx.send_text(f"❌ 无法解析 AI 的删除指令。", at_list)
+             if ctx.logger: ctx.logger.warning(f"AI 删除提醒 JSON 解析失败: {ai_response}")
+             return True
+        except ValueError as e:
+             ctx.send_text(f"❌ AI 返回的删除指令格式错误。", at_list)
+             if ctx.logger: ctx.logger.warning(f"AI 删除提醒 JSON 格式错误: {e} - Response: {ai_response}")
+             return True
+
+        # --- 步骤 4: 根据 AI 指令执行操作 ---
+        action = parsed_ai_response.get("action")
+
+        if action == "delete_specific":
+            reminder_ids_to_delete = parsed_ai_response.get("ids", [])
+            if not reminder_ids_to_delete or not isinstance(reminder_ids_to_delete, list):
+                 ctx.send_text("❌ AI 指示删除特定提醒，但未提供有效的 ID 列表。", at_list)
+                 return True
+
+            delete_results = []
+            successful_deletes = 0
+            # 记录删除的提醒描述，用于反馈
+            deleted_descriptions = []
+
+            for r_id in reminder_ids_to_delete:
+                # 从原始列表中查找提醒内容，用于反馈
+                original_reminder = next((r for r in reminders if r['id'] == r_id), None)
+                desc = f"ID:{r_id[:6]}..."
+                if original_reminder:
+                    desc = f"ID:{r_id[:6]}... 内容: \"{original_reminder['content'][:20]}...\""
+
+                success, message = ctx.robot.reminder_manager.delete_reminder(ctx.msg.sender, r_id)
+                delete_results.append({"id": r_id, "success": success, "message": message, "description": desc})
+                if success:
+                    successful_deletes += 1
+                    deleted_descriptions.append(desc)
+
+            # 构建反馈消息
+            if successful_deletes == len(reminder_ids_to_delete):
+                reply_msg = f"✅ 已成功删除 {successful_deletes} 个提醒:\n" + "\n".join([f"- {d}" for d in deleted_descriptions])
+            elif successful_deletes > 0:
+                reply_msg = f"⚠️ 部分提醒删除完成 ({successful_deletes}/{len(reminder_ids_to_delete)}):\n"
+                for res in delete_results:
+                    status = "✅ 成功" if res["success"] else f"❌ 失败: {res['message']}"
+                    reply_msg += f"- {res['description']}: {status}\n"
+            else:
+                reply_msg = f"❌ 未能删除 AI 指定的提醒。\n"
+                for res in delete_results:
+                     reply_msg += f"- {res['description']}: 失败原因: {res['message']}\n"
+
+            ctx.send_text(reply_msg.strip(), at_list)
+            # 尝试触发馈赠
+            if successful_deletes > 0 and ctx.is_group and hasattr(ctx.robot, "goblin_gift_manager"):
+                ctx.robot.goblin_gift_manager.try_trigger(ctx.msg)
+
+        elif action == "delete_all":
+            success, message, count = ctx.robot.reminder_manager.delete_all_reminders(ctx.msg.sender)
+            ctx.send_text(message, at_list)
+            # 尝试触发馈赠
+            if success and count > 0 and ctx.is_group and hasattr(ctx.robot, "goblin_gift_manager"):
+                 ctx.robot.goblin_gift_manager.try_trigger(ctx.msg)
+
+        elif action in ["clarify", "not_found", "error"]:
+            # 直接转发 AI 给用户的消息
+            message_to_user = parsed_ai_response.get("message", "抱歉，我没能处理您的请求。")
+            # 可以选择性地格式化 options
+            if action == "clarify" and "options" in parsed_ai_response:
+                 options_text = "\n可能的选项：\n" + "\n".join([f"- ID: {opt.get('id', 'N/A')} ({opt.get('description', '无描述')})" for opt in parsed_ai_response["options"]])
+                 message_to_user += options_text
+            ctx.send_text(message_to_user, at_list)
+
+        else:
+            # AI 返回了未知的 action
+            ctx.send_text("❌ AI 返回了无法理解的指令。", at_list)
+            if ctx.logger: ctx.logger.error(f"AI 删除提醒返回未知 action: {action} - Response: {ai_response}")
+
+        return True # AI 处理流程结束
+
+    except Exception as e: # 捕获 AI 调用和处理过程中的其他顶层错误
+        ctx.send_text(f"❌ 处理删除提醒时发生意外错误。", at_list)
+        if ctx.logger:
+            ctx.logger.error(f"handle_delete_reminder AI 部分顶层错误: {e}", exc_info=True)
+        return True
 
 def handle_weather(ctx: 'MessageContext', match: Optional[Match]) -> bool:
     """
