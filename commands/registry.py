@@ -191,13 +191,13 @@ COMMANDS = [
     
     Command(
         name="delete_reminder",
-        # 匹配 "删除提醒 " 后跟任意内容，用于删除特定提醒
-        pattern=re.compile(r"^(删除提醒|取消提醒)\s+(.+)$", re.IGNORECASE | re.DOTALL),
+        # 修改为只匹配包含"删"、"删除"或"取消"的消息，不再要求特定格式
+        pattern=re.compile(r"(?:删|删除|取消)", re.IGNORECASE),
         scope="both",    # 支持群聊和私聊
         need_at=True,    # 在群聊中需要@机器人
         priority=37,
         handler=handle_delete_reminder,
-        description="删除指定提醒 (可用自然语言描述，如'删掉明天开会的那个'，或用'ID:xxxxxx'，或用'all'删除全部)"
+        description="删除提醒 (包含'删'和'提醒'关键字即可，如: 把开会的提醒删了)"
     ),
 ]
 
