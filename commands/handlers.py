@@ -45,10 +45,6 @@ def handle_help(ctx: 'MessageContext', match: Optional[Match]) -> bool:
         "- 查看提醒/我的提醒/提醒列表",
         "- 删除提醒 [ID]/all",
         "",
-        "【成语】",
-        "- #成语：接龙",
-        "- ?成语：查询成语释义",
-        "",
         "【群聊工具】",
         "- summary/总结",
         "- clearmessages/清除历史",
@@ -567,48 +563,6 @@ def handle_rename(ctx: 'MessageContext', match: Optional[Match]) -> bool:
         ctx.send_text("⚠️ 改名失败")
         return False
 
-def handle_chengyu(ctx: 'MessageContext', match: Optional[Match]) -> bool:
-    """
-    处理 "成语" 命令
-    
-    匹配: #成语 或 ?成语
-    """
-    if not match:
-        return False
-    
-    flag = match.group(1)  # '#' 或 '?'
-    text = match.group(2)  # 成语文本
-    
-    try:
-        from function.func_chengyu import cy
-        
-        if flag == "#":  # 接龙
-            if cy.isChengyu(text):
-                rsp = cy.getNext(text)
-                if rsp:
-                    ctx.send_text(rsp)
-                    
-                    # 尝试触发馈赠
-                    if ctx.is_group and hasattr(ctx.robot, "goblin_gift_manager"):
-                        ctx.robot.goblin_gift_manager.try_trigger(ctx.msg)
-                    
-                    return True
-        elif flag in ["?", "？"]:  # 查词
-            if cy.isChengyu(text):
-                rsp = cy.getMeaning(text)
-                if rsp:
-                    ctx.send_text(rsp)
-                    
-                    # 尝试触发馈赠
-                    if ctx.is_group and hasattr(ctx.robot, "goblin_gift_manager"):
-                        ctx.robot.goblin_gift_manager.try_trigger(ctx.msg)
-                    
-                    return True
-    except Exception as e:
-        if ctx.logger:
-            ctx.logger.error(f"处理成语出错: {e}")
-    
-    return False
 
 def handle_chitchat(ctx: 'MessageContext', match: Optional[Match]) -> bool:
     """

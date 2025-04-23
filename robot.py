@@ -21,7 +21,6 @@ from ai_providers.ai_ollama import Ollama
 from ai_providers.ai_chatgpt import ChatGPT
 from ai_providers.ai_deepseek import DeepSeek
 from ai_providers.ai_perplexity import Perplexity
-from function.func_chengyu import cy
 from function.func_weather import Weather
 from function.func_news import News
 from ai_providers.ai_tigerbot import TigerBot
@@ -250,8 +249,6 @@ class Robot(Job):
                         # 调用handle_chitchat函数处理闲聊
                         handle_chitchat(ctx, None)
                     else:
-                        # 处理成语等不需要@的功能
-                        # 成语功能已经通过命令路由器处理，这里不需要再处理
                         pass
                         
                 # 5.4 私聊消息，未被命令处理，进行闲聊

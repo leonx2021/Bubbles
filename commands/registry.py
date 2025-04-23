@@ -4,7 +4,7 @@ from .handlers import (
     handle_help, handle_duel, handle_sneak_attack, handle_duel_rank,
     handle_duel_stats, handle_check_equipment, handle_reset_memory,
     handle_summary, handle_clear_messages, handle_news_request,
-    handle_rename, handle_chengyu, handle_chitchat, handle_insult,
+    handle_rename, handle_chitchat, handle_insult,
     handle_perplexity_ask, handle_reminder, handle_list_reminders, handle_delete_reminder,
     handle_weather, handle_weather_forecast
 )
@@ -166,17 +166,6 @@ COMMANDS = [
         priority=55,        # 优先级较低
         handler=handle_rename,
         description="更改昵称"
-    ),
-    
-    # ======== 成语系统命令 ========
-    Command(
-        name="chengyu",
-        pattern=re.compile(r"^([#?？])(.+)$"),
-        scope="both",       # 群聊和私聊都支持
-        need_at=False,      # 不需要@机器人
-        priority=60,        # 优先级较低
-        handler=handle_chengyu,
-        description="成语接龙与查询"
     ),
     
     # ======== 提醒功能 ========

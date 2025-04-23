@@ -8,6 +8,7 @@ from collections import deque
 import sqlite3  # 添加sqlite3模块
 import os  # 用于处理文件路径
 from function.func_xml_process import XmlProcessor  # 导入XmlProcessor
+from commands.registry import COMMANDS # 导入命令列表
 
 class MessageSummary:
     """消息总结功能类 (使用SQLite持久化)
@@ -302,6 +303,7 @@ class MessageSummary:
     def process_message_from_wxmsg(self, msg, wcf, all_contacts, bot_wxid=None):
         """从微信消息对象中处理并记录与总结相关的文本消息
         使用 XmlProcessor 提取用户实际输入的新内容或卡片标题。
+        会自动跳过所有匹配 commands.registry 中定义的命令的消息。
 
         Args:
             msg: 微信消息对象(WxMsg)
@@ -318,42 +320,59 @@ class MessageSummary:
             return
 
         chat_id = msg.roomid
+        # 原始消息内容用于命令和@匹配
+        original_content = msg.content.strip() 
 
-        # 2. 检查是否 @机器人 (如果提供了 bot_wxid)
-        original_content = msg.content  # 获取原始content用于检测@和后续处理
+        # 2. 预先判断消息是否 @ 了机器人 (如果提供了 bot_wxid)
+        is_at_message = False
+        bot_name_in_group = "" # 初始化为空字符串
         if bot_wxid:
-            # 获取机器人在群里的昵称
             bot_name_in_group = wcf.get_alias_in_chatroom(bot_wxid, chat_id)
             if not bot_name_in_group:
-                # 如果获取不到群昵称，使用通讯录中的名称或默认名称
-                bot_name_in_group = all_contacts.get(bot_wxid, "泡泡")  # 默认使用"泡泡"
-                
-            # 检查消息中任意位置是否@机器人（含特殊空格\u2005）
-            mention_pattern = f"@{bot_name_in_group}"
-            if mention_pattern in original_content:
-                # 消息提及了机器人，不记录
-                self.LOG.debug(f"跳过包含@机器人的消息: {original_content[:30]}...")
-                return
-                
-            # 使用正则表达式匹配更复杂的情况（考虑特殊空格）
-            if re.search(rf"@{re.escape(bot_name_in_group)}(\u2005|\s|$)", original_content):
-                self.LOG.debug(f"通过正则跳过包含@机器人的消息: {original_content[:30]}...")
-                return
+                bot_name_in_group = all_contacts.get(bot_wxid, "泡泡") # 使用通讯录或默认名
+            
+            # 优化@检查：检查原始文本中是否包含 "@机器人昵称" (考虑特殊空格)
+            mention_pattern_exact = f"@{re.escape(bot_name_in_group)}"
+            mention_pattern_space = rf"@{re.escape(bot_name_in_group)}(\u2005|\s|$)"
+            if mention_pattern_exact in original_content or re.search(mention_pattern_space, original_content):
+                is_at_message = True
 
-        # 3. 使用 XmlProcessor 提取消息详情
+        # 3. 检查消息是否匹配任何已定义的命令
+        for command in COMMANDS:
+            # 只关心在群聊生效的命令
+            if command.scope in ["group", "both"]:
+                match = command.pattern.search(original_content)
+                if match:
+                    # 如果命令需要@，但消息实际上没有@机器人，则这不是一个有效的命令调用，继续检查下一个命令
+                    if command.need_at and not is_at_message:
+                        continue 
+                        
+                    # 如果命令不需要@，或者需要@且消息确实@了机器人，那么这就是一个命令调用，跳过记录
+                    self.LOG.debug(f"跳过匹配命令 '{command.name}' 的消息: {original_content[:30]}...")
+                    return # 直接返回，不记录此消息
+
+        # 4. 如果消息没有匹配任何命令，但确实@了机器人，也跳过记录
+        # （防止记录类似 "你好 @机器人" 这样的非命令交互）
+        if is_at_message:
+            self.LOG.debug(f"跳过非命令但包含@机器人的消息: {original_content[:30]}...")
+            return
+
+        # 5. 使用 XmlProcessor 提取消息详情 (如果消息不是命令且没有@机器人)
         try:
-            extracted_data = self.xml_processor.extract_quoted_message(msg)
+            # 传入原始 msg 对象
+            extracted_data = self.xml_processor.extract_quoted_message(msg) 
         except Exception as e:
             self.LOG.error(f"使用XmlProcessor提取消息内容时出错 (msg.id={msg.id}): {e}")
             return  # 出错时，保守起见，不记录
 
-        # 4. 确定要记录的内容 (content_to_record)
+        # 6. 确定要记录的内容 (content_to_record)
         content_to_record = ""
         source_info = "未知来源"
 
         # 优先使用提取到的新内容 (来自回复或普通文本或<title>)
-        if extracted_data.get("new_content", "").strip():
-            content_to_record = extracted_data["new_content"].strip()
+        temp_new_content = extracted_data.get("new_content", "").strip()
+        if temp_new_content:
+            content_to_record = temp_new_content
             source_info = "来自 new_content (回复/文本/标题)"
             
             # 如果是引用类型消息，添加引用标记和引用内容的简略信息
@@ -396,6 +415,7 @@ class MessageSummary:
                     else:
                         # 仅添加引用内容，将新内容放在前面，引用内容放在后面
                         content_to_record = f"{content_to_record} 【回复：{quoted_content}】"
+
         # 其次，如果新内容为空，但这是一个卡片且有标题，则使用卡片标题
         elif extracted_data.get("is_card") and extracted_data.get("card_title", "").strip():
             # 卡片消息使用固定格式，包含标题和描述
@@ -438,17 +458,20 @@ class MessageSummary:
             content_to_record = f"【{card_content}】"
                 
             source_info = "来自 卡片(标题+描述)"
-        # 普通文本消息的保底处理
-        elif msg.type == 0x01 and not ("<" in original_content and ">" in original_content):
-            content_to_record = original_content.strip()
-            source_info = "来自 纯文本消息"
+            
+        # 普通文本消息的保底处理 (已在前面排除了命令和@消息)
+        elif msg.type == 0x01 and not ("<" in msg.content and ">" in msg.content): # 再次确认是纯文本
+             content_to_record = msg.content.strip() # 使用原始纯文本
+             source_info = "来自 纯文本消息"
 
-        # 5. 如果最终没有提取到有效内容，则不记录
+
+        # 7. 如果最终没有提取到有效内容，则不记录
         if not content_to_record:
-            self.LOG.debug(f"XmlProcessor未能提取到有效文本内容，跳过记录 (msg.id={msg.id}) - Quote: {extracted_data.get('has_quote', False)}, IsCard: {extracted_data.get('is_card', False)}")
+            # Debug日志级别调整为更详细，说明为何没有内容
+            self.LOG.debug(f"未能提取到有效文本内容用于记录，跳过 (msg.id={msg.id}) - IsCard: {extracted_data.get('is_card', False)}, HasQuote: {extracted_data.get('has_quote', False)}")
             return
 
-        # 6. 获取发送者昵称
+        # 8. 获取发送者昵称
         sender_name = wcf.get_alias_in_chatroom(msg.sender, msg.roomid)
         if not sender_name:  # 如果没有群昵称，尝试获取微信昵称
             sender_data = all_contacts.get(msg.sender)
@@ -457,6 +480,6 @@ class MessageSummary:
         # 获取当前时间(只用于记录，不再打印)
         current_time_str = time.strftime("%H:%M", time.localtime())
 
-        # 8. 记录提取到的有效内容
+        # 9. 记录提取到的有效内容
         self.LOG.debug(f"记录消息 (来源: {source_info}): '[{current_time_str}]{sender_name}: {content_to_record}' (来自 msg.id={msg.id})")
-        self.record_message(chat_id, sender_name, content_to_record, current_time_str) 
+        self.record_message(chat_id, sender_name, content_to_record, current_time_str)
