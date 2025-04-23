@@ -1,12 +1,14 @@
 import re
 from .models import Command
 from .handlers import (
-    handle_help, handle_duel, handle_sneak_attack, handle_duel_rank,
-    handle_duel_stats, handle_check_equipment, handle_reset_memory,
+    handle_help, 
+    # handle_duel, handle_sneak_attack, handle_duel_rank,
+    # handle_duel_stats, handle_check_equipment, handle_rename,
+    handle_reset_memory,
     handle_summary, handle_clear_messages, handle_news_request,
-    handle_rename, handle_chitchat, handle_insult,
+    handle_chitchat, handle_insult,
     handle_perplexity_ask, handle_reminder, handle_list_reminders, handle_delete_reminder,
-    handle_weather, handle_weather_forecast
+    handle_weather_forecast
 )
 
 # 命令列表，按优先级排序
@@ -21,17 +23,6 @@ COMMANDS = [
         priority=10,        # 优先级较高
         handler=handle_help,
         description="显示机器人的帮助信息"
-    ),
-    
-    # 添加骂人命令
-    Command(
-        name="insult",
-        pattern=re.compile(r"骂一下\s*@([^\s@]+)"),
-        scope="group",      # 仅群聊支持
-        need_at=True,       # 需要@机器人
-        priority=15,        # 优先级较高
-        handler=handle_insult,
-        description="骂指定用户"
     ),
     
     Command(
@@ -127,6 +118,17 @@ COMMANDS = [
         priority=40,        # 优先级一般
         handler=handle_news_request,
         description="获取最新新闻"
+    ),
+    
+    # ======== 骂人命令 ========
+    Command(
+        name="insult",
+        pattern=re.compile(r"骂一下\s*@([^\s@]+)"),
+        scope="group",      # 仅群聊支持
+        need_at=True,       # 需要@机器人
+        priority=100,        # 优先级较高
+        handler=handle_insult,
+        description="骂指定用户"
     ),
     
     # # ======== 决斗系统命令 ========
