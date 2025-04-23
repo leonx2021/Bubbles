@@ -33,7 +33,7 @@
 
 Bubbles 是一个功能丰富的微信机器人框架，基于 [wcferry](https://github.com/lich0821/wcferry) 和 [WechatRobot](https://github.com/lich0821/wechatrobot) 开发，支持接入多种LLM，提供丰富的交互功能和定时任务。该项目旨在将微信客户端转变为一个智能的个人助手，可以执行多种实用功能，带来便捷的用户体验。
 
-和一般机器人框架不同的是，Bubbles 实现了一个 [**命令路由系统**](https://github.com/Zippland/Bubbles/blob/main/commands/registry.py) ，相当于一个主线 Hub，只用通过简单正则逻辑，即可将外部服务进行注册，将海量的、不同种类的工具集成到 AI 里。
+和一般机器人框架不同的是，Bubbles 设计了一套简单的 [**命令路由系统**](https://github.com/Zippland/Bubbles/blob/main/commands/registry.py) ，让添加新功能变得容易，且不用改动任何原有的代码 —— 相当于给一个主线 Hub 添加一个插件，只用通过简单正则逻辑，即可将外部服务进行注册，将海量的、不同种类的工具集成到 AI 里。具体操作详见 **如何添加新功能（命令路由系统）** 章节。
 
 
 #### 案例演示：使用自然语言设置提醒
@@ -87,8 +87,8 @@ Bubbles 是一个功能丰富的微信机器人框架，基于 [wcferry](https:/
 
 1. **克隆仓库**
    ```bash
-   git clone https://github.com/zippland/Bubbles-WechatAI.git
-   cd Bubbles-WechatAI
+   git clone https://github.com/zippland/Bubbles.git
+   cd Bubbles
    ```
 
 2. **创建并激活虚拟环境（可选但推荐）**
@@ -292,7 +292,7 @@ A: 检查 wcferry 服务是否正常运行，查看日志文件了解详细错�
 
 如有任何问题或建议，请通过以下方式联系我们：
 
-- GitHub Issues: [提交问题](https://github.com/zippland/Bubbles-WechatAI/issues)
+- GitHub Issues: [提交问题](https://github.com/zippland/Bubbles/issues)
 - Email: zylanjian@outlook.com
 
 ---
