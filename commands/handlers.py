@@ -9,8 +9,6 @@ from function.func_duel import DuelRankSystem
 # 导入AI模型
 from ai_providers.ai_deepseek import DeepSeek
 from ai_providers.ai_chatgpt import ChatGPT  
-from ai_providers.ai_chatglm import ChatGLM
-from ai_providers.ai_ollama import Ollama
 
 # 前向引用避免循环导入
 from typing import TYPE_CHECKING
@@ -129,29 +127,6 @@ def handle_reset_memory(ctx: 'MessageContext', match: Optional[Match]) -> bool:
                     result = "✅ 已重置ChatGPT对话记忆，保留系统提示，开始新的对话"
                 else:
                     result = f"⚠️ {model_name} 对话记忆已为空，无需重置"
-                    
-            elif isinstance(chat_model, ChatGLM):
-                # ChatGLM模型
-                if hasattr(chat_model, 'chat_type') and chat_id in chat_model.chat_type:
-                    chat_type = chat_model.chat_type[chat_id]
-                    # 保留系统提示，删除对话历史
-                    if chat_type in chat_model.conversation_list[chat_id]:
-                        chat_model.conversation_list[chat_id][chat_type] = []
-                        if ctx.logger: ctx.logger.info(f"已重置ChatGLM对话记忆: {chat_id}")
-                        result = "✅ 已重置ChatGLM对话记忆，开始新的对话"
-                    else:
-                        result = f"⚠️ 未找到与 {model_name} 的对话记忆，无需重置"
-                else:
-                    result = f"⚠️ 未找到与 {model_name} 的对话记忆，无需重置"
-                
-            elif isinstance(chat_model, Ollama):
-                # Ollama模型
-                if chat_id in chat_model.conversation_list:
-                    chat_model.conversation_list[chat_id] = []
-                    if ctx.logger: ctx.logger.info(f"已重置Ollama对话记忆: {chat_id}")
-                    result = "✅ 已重置Ollama对话记忆，开始新的对话"
-                else:
-                    result = f"⚠️ 未找到与 {model_name} 的对话记忆，无需重置"
             
             else:
                 # 通用处理方式：直接删除对话记录

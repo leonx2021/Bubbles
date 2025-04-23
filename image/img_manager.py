@@ -5,7 +5,7 @@ import shutil
 import time
 from wcferry import Wcf
 from configuration import Config
-from image import CogView, AliyunImage, GeminiImage
+from image import AliyunImage, GeminiImage
 
 
 class ImageGenerationManager:
@@ -29,7 +29,6 @@ class ImageGenerationManager:
         self.send_text = send_text_callback
         
         # 初始化图像生成服务
-        self.cogview = None
         self.aliyun_image = None
         self.gemini_image = None
         
@@ -46,15 +45,7 @@ class ImageGenerationManager:
                 self.LOG.info("谷歌Gemini图像生成功能已启用")
         except Exception as e:
             self.LOG.error(f"初始化谷歌Gemini图像生成服务失败: {e}")
-        
-        # 初始化CogView服务
-        if hasattr(self.config, 'COGVIEW') and self.config.COGVIEW.get('enable', False):
-            try:
-                self.cogview = CogView(self.config.COGVIEW)
-                self.LOG.info("智谱CogView文生图功能已初始化")
-            except Exception as e:
-                self.LOG.error(f"初始化智谱CogView文生图服务失败: {str(e)}")
-                
+                       
         # 初始化AliyunImage服务
         if hasattr(self.config, 'ALIYUN_IMAGE') and self.config.ALIYUN_IMAGE.get('enable', False):
             try:
@@ -65,23 +56,13 @@ class ImageGenerationManager:
     
     def handle_image_generation(self, service_type, prompt, receiver, at_user=None):
         """处理图像生成请求的通用函数
-        :param service_type: 服务类型，'cogview'/'aliyun'/'gemini'
+        :param service_type: 服务类型，'aliyun'/'gemini'
         :param prompt: 图像生成提示词
         :param receiver: 接收者ID
         :param at_user: 被@的用户ID，用于群聊
         :return: 处理状态，True成功，False失败
         """
-        if service_type == 'cogview':
-            if not self.cogview or not hasattr(self.config, 'COGVIEW') or not self.config.COGVIEW.get('enable', False):
-                self.LOG.info(f"收到智谱文生图请求但功能未启用: {prompt}")
-                fallback_to_chat = self.config.COGVIEW.get('fallback_to_chat', False) if hasattr(self.config, 'COGVIEW') else False
-                if not fallback_to_chat:
-                    self.send_text("报一丝，智谱文生图功能没有开启，请联系管理员开启此功能。（可以贿赂他开启）", receiver, at_user)
-                    return True
-                return False
-            service = self.cogview
-            wait_message = "正在生成图像，请稍等..."
-        elif service_type == 'aliyun':
+        if service_type == 'aliyun':
             if not self.aliyun_image or not hasattr(self.config, 'ALIYUN_IMAGE') or not self.config.ALIYUN_IMAGE.get('enable', False):
                 self.LOG.info(f"收到阿里文生图请求但功能未启用: {prompt}")
                 fallback_to_chat = self.config.ALIYUN_IMAGE.get('fallback_to_chat', False) if hasattr(self.config, 'ALIYUN_IMAGE') else False

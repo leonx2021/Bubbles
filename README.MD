@@ -47,14 +47,8 @@ Bubbles 是一个功能丰富的微信机器人框架，基于 [wcferry](https:/
 #### 🤖 灵活的模型配置
 - 支持为不同的群聊和私聊设置不同的 AI 模型和 system prompt
   - OpenAI (ChatGPT)
-  - Google Gemini
-  - 智谱 AI (ChatGLM)
-  - 科大讯飞星火大模型
-  - 阿里云通义千问
-  - TigerBot
   - DeepSeek
   - Perplexity
-  - Ollama (本地部署的模型)
 
 #### 🛠️ 丰富的命令系统
 - 强大的命令路由系统，让功能新增无比简单

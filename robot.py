@@ -9,22 +9,16 @@ from threading import Thread
 import os
 import random
 import shutil
-from ai_providers.ai_zhipu import ZhiPu
-from image import CogView, AliyunImage, GeminiImage
+from image import AliyunImage, GeminiImage
 from image.img_manager import ImageGenerationManager
 
 from wcferry import Wcf, WxMsg
 
-from ai_providers.ai_bard import BardAssistant
-from ai_providers.ai_chatglm import ChatGLM
-from ai_providers.ai_ollama import Ollama
 from ai_providers.ai_chatgpt import ChatGPT
 from ai_providers.ai_deepseek import DeepSeek
 from ai_providers.ai_perplexity import Perplexity
 from function.func_weather import Weather
 from function.func_news import News
-from ai_providers.ai_tigerbot import TigerBot
-from ai_providers.ai_xinghuo_web import XinghuoWeb
 from function.func_duel import start_duel, get_rank_list, get_player_stats, change_player_name, DuelManager, attempt_sneak_attack
 from function.func_summary import MessageSummary  # 导入新的MessageSummary类
 from function.func_reminder import ReminderManager  # 导入ReminderManager类
@@ -47,74 +41,56 @@ class Robot(Job):
     """
 
     def __init__(self, config: Config, wcf: Wcf, chat_type: int) -> None:
-        # 调用父类构造函数
         super().__init__()
-        
+
         self.wcf = wcf
         self.config = config
         self.LOG = logging.getLogger("Robot")
-        self.wxid = self.wcf.get_self_wxid()
+        self.wxid = self.wcf.get_self_wxid() # 获取机器人自己的wxid
         self.allContacts = self.getAllContacts()
         self._msg_timestamps = []
-        # 创建决斗管理器
         self.duel_manager = DuelManager(self.sendDuelMsg)
-        
-        # 初始化消息总结功能
-        self.message_summary = MessageSummary(max_history=200)
-        
-        # 初始化XML处理器
+
+        try:
+             db_path = "data/message_history.db"
+             # 使用 getattr 安全地获取 MAX_HISTORY，如果不存在则默认为 300
+             max_hist = getattr(config, 'MAX_HISTORY', 300)
+             self.message_summary = MessageSummary(max_history=max_hist, db_path=db_path)
+             self.LOG.info(f"消息历史记录器已初始化 (max_history={self.message_summary.max_history})")
+        except Exception as e:
+             self.LOG.error(f"初始化 MessageSummary 失败: {e}", exc_info=True)
+             self.message_summary = None # 保持失败时的处理
+
         self.xml_processor = XmlProcessor(self.LOG)
-        
-        # 初始化所有可能需要的AI模型实例
+
         self.chat_models = {}
         self.LOG.info("开始初始化各种AI模型...")
-        
-        # 初始化TigerBot
-        if TigerBot.value_check(self.config.TIGERBOT):
-            self.chat_models[ChatType.TIGER_BOT.value] = TigerBot(self.config.TIGERBOT)
-            self.LOG.info(f"已加载 TigerBot 模型")
-            
+
         # 初始化ChatGPT
         if ChatGPT.value_check(self.config.CHATGPT):
-            self.chat_models[ChatType.CHATGPT.value] = ChatGPT(self.config.CHATGPT)
-            self.LOG.info(f"已加载 ChatGPT 模型")
-            
-        # 初始化讯飞星火
-        if XinghuoWeb.value_check(self.config.XINGHUO_WEB):
-            self.chat_models[ChatType.XINGHUO_WEB.value] = XinghuoWeb(self.config.XINGHUO_WEB)
-            self.LOG.info(f"已加载 讯飞星火 模型")
-            
-        # 初始化ChatGLM
-        if ChatGLM.value_check(self.config.CHATGLM):
             try:
-                # 检查key是否有实际内容而不只是存在
-                if self.config.CHATGLM.get('key') and self.config.CHATGLM.get('key').strip():
-                    self.chat_models[ChatType.CHATGLM.value] = ChatGLM(self.config.CHATGLM)
-                    self.LOG.info(f"已加载 ChatGLM 模型")
-                else:
-                    self.LOG.warning("ChatGLM 配置中缺少有效的API密钥，跳过初始化")
+                # 传入 message_summary 和 wxid
+                self.chat_models[ChatType.CHATGPT.value] = ChatGPT(
+                    self.config.CHATGPT,
+                    message_summary_instance=self.message_summary,
+                    bot_wxid=self.wxid
+                )
+                self.LOG.info(f"已加载 ChatGPT 模型")
             except Exception as e:
-                self.LOG.error(f"初始化 ChatGLM 模型时出错: {str(e)}")
-            
-        # 初始化BardAssistant
-        if BardAssistant.value_check(self.config.BardAssistant):
-            self.chat_models[ChatType.BardAssistant.value] = BardAssistant(self.config.BardAssistant)
-            self.LOG.info(f"已加载 BardAssistant 模型")
-            
-        # 初始化ZhiPu
-        if ZhiPu.value_check(self.config.ZhiPu):
-            self.chat_models[ChatType.ZhiPu.value] = ZhiPu(self.config.ZhiPu)
-            self.LOG.info(f"已加载 智谱 模型")
-            
-        # 初始化Ollama
-        if Ollama.value_check(self.config.OLLAMA):
-            self.chat_models[ChatType.OLLAMA.value] = Ollama(self.config.OLLAMA)
-            self.LOG.info(f"已加载 Ollama 模型")
+                self.LOG.error(f"初始化 ChatGPT 模型时出错: {str(e)}")
             
         # 初始化DeepSeek
         if DeepSeek.value_check(self.config.DEEPSEEK):
-            self.chat_models[ChatType.DEEPSEEK.value] = DeepSeek(self.config.DEEPSEEK)
-            self.LOG.info(f"已加载 DeepSeek 模型")
+            try:
+                 # 传入 message_summary 和 wxid
+                 self.chat_models[ChatType.DEEPSEEK.value] = DeepSeek(
+                     self.config.DEEPSEEK,
+                     message_summary_instance=self.message_summary,
+                     bot_wxid=self.wxid
+                 )
+                 self.LOG.info(f"已加载 DeepSeek 模型")
+            except Exception as e:
+                 self.LOG.error(f"初始化 DeepSeek 模型时出错: {str(e)}")
             
         # 初始化Perplexity
         if Perplexity.value_check(self.config.PERPLEXITY):
@@ -277,40 +253,60 @@ class Robot(Job):
         Thread(target=innerProcessMsg, name="GetMessage", args=(self.wcf,), daemon=True).start()
 
     def sendTextMsg(self, msg: str, receiver: str, at_list: str = "") -> None:
-        """ 发送消息
+        """ 发送消息并记录
         :param msg: 消息字符串
         :param receiver: 接收人wxid或者群id
         :param at_list: 要@的wxid, @所有人的wxid为：notify@all
         """
-        # 随机延迟0.3-1.3秒，并且一分钟内发送限制
+        # 延迟和频率限制 (逻辑不变)
         time.sleep(float(str(time.time()).split('.')[-1][-2:]) / 100.0 + 0.3)
         now = time.time()
         if self.config.SEND_RATE_LIMIT > 0:
-            # 清除超过1分钟的记录
             self._msg_timestamps = [t for t in self._msg_timestamps if now - t < 60]
             if len(self._msg_timestamps) >= self.config.SEND_RATE_LIMIT:
                 self.LOG.warning(f"发送消息过快，已达到每分钟{self.config.SEND_RATE_LIMIT}条上限。")
                 return
             self._msg_timestamps.append(now)
 
-        # msg 中需要有 @ 名单中一样数量的 @
         ats = ""
+        message_to_send = msg # 保存原始消息用于记录
         if at_list:
-            if at_list == "notify@all":  # @所有人
+            if at_list == "notify@all":
                 ats = " @所有人"
             else:
                 wxids = at_list.split(",")
-                for wxid in wxids:
-                    # 根据 wxid 查找群昵称
-                    ats += f" @{self.wcf.get_alias_in_chatroom(wxid, receiver)}"
+                for wxid_at in wxids: # Renamed variable
+                    ats += f" @{self.wcf.get_alias_in_chatroom(wxid_at, receiver)}"
 
-        # {msg}{ats} 表示要发送的消息内容后面紧跟@，例如 北京天气情况为：xxx @张三
-        if ats == "":
-            self.LOG.info(f"To {receiver}: {msg}")
-            self.wcf.send_text(f"{msg}", receiver, at_list)
-        else:
-            self.LOG.info(f"To {receiver}:\n{ats}\n{msg}")
-            self.wcf.send_text(f"{ats}\n\n{msg}", receiver, at_list)
+        try:
+            # 发送消息 (逻辑不变)
+            if ats == "":
+                self.LOG.info(f"To {receiver}: {msg}")
+                self.wcf.send_text(f"{msg}", receiver, at_list)
+            else:
+                full_msg_content = f"{ats}\n\n{msg}"
+                self.LOG.info(f"To {receiver}:\n{ats}\n{msg}")
+                self.wcf.send_text(full_msg_content, receiver, at_list)
+
+            # ---- 修改记录逻辑 ----
+            if self.message_summary: # 检查 message_summary 是否初始化成功
+                 # 确定机器人的名字
+                 robot_name = self.allContacts.get(self.wxid, "机器人")
+                 # 使用 self.wxid 作为 sender_wxid
+                 # 注意：这里不生成时间戳，让 record_message 内部生成
+                 self.message_summary.record_message(
+                     chat_id=receiver,
+                     sender_name=robot_name,
+                     sender_wxid=self.wxid, # 传入机器人自己的 wxid
+                     content=message_to_send
+                 )
+                 self.LOG.debug(f"已记录机器人发送的消息到 {receiver}")
+            else:
+                self.LOG.warning("MessageSummary 未初始化，无法记录发送的消息")
+            # ---- 记录逻辑修改结束 ----
+
+        except Exception as e:
+            self.LOG.error(f"发送消息失败: {e}")
 
     def getAllContacts(self) -> dict:
         """

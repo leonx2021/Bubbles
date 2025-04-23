@@ -1,3 +1,4 @@
+# ai_providers/ai_chatgpt.py
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -5,119 +6,145 @@ import logging
 import base64
 import os
 from datetime import datetime
+import time # 引入 time 模块
 
 import httpx
 from openai import APIConnectionError, APIError, AuthenticationError, OpenAI
 
+# 引入 MessageSummary 类型提示 (如果需要更严格的类型检查)
+try:
+    from function.func_summary import MessageSummary
+except ImportError:
+    MessageSummary = object # Fallback if import fails or for simplified typing
+
 
 class ChatGPT():
-    def __init__(self, conf: dict) -> None:
+    # ---- 修改 __init__ ----
+    def __init__(self, conf: dict, message_summary_instance: MessageSummary = None, bot_wxid: str = None) -> None:
         key = conf.get("key")
         api = conf.get("api")
         proxy = conf.get("proxy")
         prompt = conf.get("prompt")
         self.model = conf.get("model", "gpt-3.5-turbo")
+        # ---- 新增：读取最大历史消息数配置 ----
+        self.max_history_messages = conf.get("max_history_messages", 10) # 读取配置，默认10条
+        # ---- 新增结束 ----
         self.LOG = logging.getLogger("ChatGPT")
+
+        # ---- 存储传入的实例和wxid ----
+        self.message_summary = message_summary_instance
+        self.bot_wxid = bot_wxid
+        if not self.message_summary:
+             self.LOG.warning("MessageSummary 实例未提供给 ChatGPT，上下文功能将不可用！")
+        if not self.bot_wxid:
+             self.LOG.warning("bot_wxid 未提供给 ChatGPT，可能无法正确识别机器人自身消息！")
+        # ---- 存储结束 ----
+
         if proxy:
             self.client = OpenAI(api_key=key, base_url=api, http_client=httpx.Client(proxy=proxy))
         else:
             self.client = OpenAI(api_key=key, base_url=api)
-        self.conversation_list = {}
-        self.system_content_msg = {"role": "system", "content": prompt}
-        # 确认是否使用支持视觉的模型
+
+        # ---- 移除 self.conversation_list ----
+        # self.conversation_list = {}
+        # ---- 移除结束 ----
+
+        self.system_content_msg = {"role": "system", "content": prompt if prompt else "You are a helpful assistant."} # 提供默认值
         self.support_vision = self.model == "gpt-4-vision-preview" or self.model == "gpt-4o" or "-vision" in self.model
+    # ---- __init__ 修改结束 ----
 
     def __repr__(self):
         return 'ChatGPT'
 
     @staticmethod
     def value_check(conf: dict) -> bool:
+        # 不再检查 prompt，因为可以没有默认 prompt
         if conf:
-            if conf.get("key") and conf.get("api") and conf.get("prompt"):
+            # ---- 修改：也检查 max_history_messages (虽然有默认值) ----
+            if conf.get("key") and conf.get("api"): # and conf.get("max_history_messages") is not None: # 如果需要强制配置
                 return True
         return False
 
+    # ---- 修改 get_answer ----
     def get_answer(self, question: str, wxid: str, system_prompt_override=None) -> str:
-        # wxid或者roomid,个人时为微信id，群消息时为群id
-        
-        # 检查是否是新对话
-        is_new_conversation = wxid not in self.conversation_list
-        
-        # 保存临时系统提示的状态
-        temp_system_used = False
-        original_prompt = None
-        
-        if system_prompt_override:
-            # 只有新对话才临时修改系统提示
-            if is_new_conversation:
-                # 临时保存原始系统提示，以便可以恢复
-                original_prompt = self.system_content_msg["content"]
-                # 设置临时系统提示
-                self.system_content_msg["content"] = system_prompt_override
-                temp_system_used = True
-                self.LOG.debug(f"为新对话 {wxid} 临时设置系统提示")
-            else:
-                # 对于已存在的对话，我们将在API调用时临时使用覆盖提示，而不修改对话历史
-                self.LOG.debug(f"对话 {wxid} 已存在，系统提示覆盖将仅用于本次API调用")
-        
-        # 添加用户问题到对话历史
-        self.updateMessage(wxid, question, "user")
-        
-        # 如果修改了系统提示，现在恢复它
-        if temp_system_used and original_prompt is not None:
-            self.system_content_msg["content"] = original_prompt
-            self.LOG.debug(f"已恢复默认系统提示")
-        
+        # ---- 移除 #清除对话 逻辑 ----
+        # ... (代码已移除) ...
+        # ---- 移除结束 ----
+
+        # ---- 获取并格式化数据库历史记录 ----
+        api_messages = []
+
+        # 1. 添加系统提示
+        effective_system_prompt = system_prompt_override if system_prompt_override else self.system_content_msg["content"]
+        if effective_system_prompt: # 确保有内容才添加
+             api_messages.append({"role": "system", "content": effective_system_prompt})
+
+        # 添加当前时间提示（可选，但原代码有）
+        now_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        time_mk = "Current time is: " # 或者其他合适的提示
+        api_messages.append({"role": "system", "content": f"{time_mk}{now_time}"})
+
+
+        # 2. 获取并格式化历史消息
+        if self.message_summary and self.bot_wxid:
+            history = self.message_summary.get_messages(wxid)
+
+            # ---- 新增：限制历史消息数量 ----
+            if self.max_history_messages is not None and self.max_history_messages > 0:
+                 history = history[-self.max_history_messages:] # 取最新的 N 条
+            elif self.max_history_messages == 0: # 如果设置为0，则不包含历史
+                 history = []
+            # ---- 新增结束 ----
+
+            for msg in history:
+                role = "assistant" if msg.get("sender_wxid") == self.bot_wxid else "user"
+                formatted_content = msg.get('content', '')
+                if formatted_content: # 避免添加空内容
+                    api_messages.append({"role": role, "content": formatted_content})
+        else:
+            self.LOG.warning(f"无法为 wxid={wxid} 获取历史记录，因为 message_summary 或 bot_wxid 未设置。")
+
+        # 3. 添加当前用户问题
+        if question: # 确保问题非空
+            api_messages.append({"role": "user", "content": question})
+        # ---- 获取和格式化结束 ----
+
         rsp = ""
         try:
-            # 准备API调用的消息列表
-            api_messages = []
-            
-            # 对于已存在的对话，临时应用系统提示覆盖（如果有）
-            if not is_new_conversation and system_prompt_override:
-                # 第一个消息可能是系统提示
-                has_system = self.conversation_list[wxid][0]["role"] == "system"
-                
-                # 使用临时系统提示替代原始系统提示
-                if has_system:
-                    # 复制除了系统提示外的所有消息
-                    api_messages = [{"role": "system", "content": system_prompt_override}]
-                    api_messages.extend(self.conversation_list[wxid][1:])
-                else:
-                    # 如果没有系统提示，添加一个
-                    api_messages = [{"role": "system", "content": system_prompt_override}]
-                    api_messages.extend(self.conversation_list[wxid])
-            else:
-                # 对于新对话或没有临时系统提示的情况，使用原始对话历史
-                api_messages = self.conversation_list[wxid]
-            
-            # o系列模型不支持自定义temperature，只能使用默认值1
+            # ---- 使用格式化后的 api_messages ----
             params = {
                 "model": self.model,
-                "messages": api_messages
+                "messages": api_messages # 使用从数据库构建的消息列表
             }
-            
+
             # 只有非o系列模型才设置temperature
             if not self.model.startswith("o"):
                 params["temperature"] = 0.2
-                
+
             ret = self.client.chat.completions.create(**params)
             rsp = ret.choices[0].message.content
             rsp = rsp[2:] if rsp.startswith("\n\n") else rsp
             rsp = rsp.replace("\n\n", "\n")
-            self.updateMessage(wxid, rsp, "assistant")
+
+            # ---- 移除 updateMessage 调用 ----
+            # ... (代码已移除) ...
+            # ---- 移除结束 ----
+
         except AuthenticationError:
             self.LOG.error("OpenAI API 认证失败，请检查 API 密钥是否正确")
+            rsp = "API认证失败"
         except APIConnectionError:
             self.LOG.error("无法连接到 OpenAI API，请检查网络连接")
+            rsp = "网络连接错误"
         except APIError as e1:
             self.LOG.error(f"OpenAI API 返回了错误：{str(e1)}")
-            rsp = "无法从 ChatGPT 获得答案"
+            rsp = f"API错误: {str(e1)}"
         except Exception as e0:
             self.LOG.error(f"发生未知错误：{str(e0)}")
-            rsp = "无法从 ChatGPT 获得答案"
+            rsp = "发生未知错误"
 
         return rsp
+    # ---- get_answer 修改结束 ----
 
     def encode_image_to_base64(self, image_path: str) -> str:
         """将图片文件转换为Base64编码
@@ -148,21 +175,21 @@ class ChatGPT():
         if not self.support_vision:
             self.LOG.error(f"当前模型 {self.model} 不支持图片理解，请使用gpt-4-vision-preview或gpt-4o")
             return "当前模型不支持图片理解功能，请联系管理员配置支持视觉的模型（如gpt-4-vision-preview或gpt-4o）"
-            
+
         if not os.path.exists(image_path):
             self.LOG.error(f"图片文件不存在: {image_path}")
             return "无法读取图片文件"
-            
+
         try:
             base64_image = self.encode_image_to_base64(image_path)
             if not base64_image:
                 return "图片编码失败"
-                
-            # 构建带有图片的消息
+
+            # 构建带有图片的消息 (这里不使用历史记录)
             messages = [
-                {"role": "system", "content": "你是一个图片分析专家，擅长分析图片内容并提供详细描述。"},
+                {"role": "system", "content": "你是一个图片分析专家，擅长分析图片内容并提供详细描述。"}, # 可以使用 self.system_content_msg 如果适用
                 {
-                    "role": "user", 
+                    "role": "user",
                     "content": [
                         {"type": "text", "text": prompt},
                         {
@@ -174,25 +201,23 @@ class ChatGPT():
                     ]
                 }
             ]
-            
-            # 使用GPT-4 Vision模型
+
             params = {
                 "model": self.model,
                 "messages": messages,
-                "max_tokens": 1000  # 限制输出长度
+                "max_tokens": 1000
             }
-            
-            # 支持视觉的模型可能有不同参数要求
+
             if not self.model.startswith("o"):
                 params["temperature"] = 0.7
-                
+
             response = self.client.chat.completions.create(**params)
             description = response.choices[0].message.content
             description = description[2:] if description.startswith("\n\n") else description
             description = description.replace("\n\n", "\n")
-            
+
             return description
-            
+
         except AuthenticationError:
             self.LOG.error("OpenAI API 认证失败，请检查 API 密钥是否正确")
             return "API认证失败，无法分析图片"
@@ -206,63 +231,13 @@ class ChatGPT():
             self.LOG.error(f"分析图片时发生未知错误：{str(e0)}")
             return f"处理图片时出错：{str(e0)}"
 
-    def updateMessage(self, wxid: str, content: str, role: str) -> None:
-        now_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
-        time_mk = "当需要回答时间时请直接参考回复:"
-        # 初始化聊天记录,组装系统信息
-        if wxid not in self.conversation_list.keys():
-            # 此时self.system_content_msg可能已经被get_answer临时修改
-            # 但这没关系，因为在get_answer结束前会恢复
-            question_ = [
-                self.system_content_msg,
-                {"role": "system", "content": "" + time_mk + now_time}
-            ]
-            self.conversation_list[wxid] = question_
-
-        # 当前问题或回答
-        content_message = {"role": role, "content": content}
-        self.conversation_list[wxid].append(content_message)
-
-        # 更新时间标记
-        for cont in self.conversation_list[wxid]:
-            if cont["role"] != "system":
-                continue
-            if cont["content"].startswith(time_mk):
-                cont["content"] = time_mk + now_time
-
-        # 控制对话历史长度
-        # 只存储10条记录，超过滚动清除
-        max_history = 12  # 包括1个系统提示和1个时间标记
-        i = len(self.conversation_list[wxid])
-        if i > max_history:
-            # 计算需要删除多少条记录
-            if self.conversation_list[wxid][0]["role"] == "system" and self.conversation_list[wxid][1]["role"] == "system":
-                # 如果前两条都是系统消息，保留它们，删除较早的用户和助手消息
-                to_delete = i - max_history
-                del self.conversation_list[wxid][2:2+to_delete]
-                self.LOG.debug(f"滚动清除微信记录：{wxid}，删除了{to_delete}条历史消息")
-            else:
-                # 如果结构不符合预期，简单地保留最近的消息
-                self.conversation_list[wxid] = self.conversation_list[wxid][-max_history:]
-                self.LOG.debug(f"滚动清除微信记录：{wxid}，只保留最近{max_history}条消息")
+    # ---- 移除 updateMessage ----
+    # ... (代码已移除) ...
+    # ---- 移除结束 ----
 
 
 if __name__ == "__main__":
-    from configuration import Config
-    config = Config().CHATGPT
-    if not config:
-        exit(0)
-
-    chat = ChatGPT(config)
-
-    while True:
-        q = input(">>> ")
-        try:
-            time_start = datetime.now()  # 记录开始时间
-            print(chat.get_answer(q, "wxid"))
-            time_end = datetime.now()  # 记录结束时间
-
-            print(f"{round((time_end - time_start).total_seconds(), 2)}s")  # 计算的时间差为程序的执行时间，单位为秒/s
-        except Exception as e:
-            print(e)
+    # --- 测试代码需要调整 ---
+    # 需要模拟 MessageSummary 和提供 bot_wxid 才能测试
+    print("请注意：直接运行此文件进行测试需要模拟 MessageSummary 并提供 bot_wxid。")
+    pass # 避免直接运行时出错

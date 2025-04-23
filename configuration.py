@@ -37,15 +37,8 @@ class Config(object):
         self.REPORT_REMINDERS = yconfig["report_reminder"]["receivers"]
 
         self.CHATGPT = yconfig.get("chatgpt", {})
-        self.OLLAMA = yconfig.get("ollama", {})
-        self.TIGERBOT = yconfig.get("tigerbot", {})
-        self.XINGHUO_WEB = yconfig.get("xinghuo_web", {})
-        self.CHATGLM = yconfig.get("chatglm", {})
-        self.BardAssistant = yconfig.get("bard", {})
-        self.ZhiPu = yconfig.get("zhipu", {})
         self.DEEPSEEK = yconfig.get("deepseek", {})
         self.PERPLEXITY = yconfig.get("perplexity", {})
-        self.COGVIEW = yconfig.get("cogview", {})
         self.ALIYUN_IMAGE = yconfig.get("aliyun_image", {})
         self.GEMINI_IMAGE = yconfig.get("gemini_image", {})
         self.SEND_RATE_LIMIT = yconfig.get("send_rate_limit", 0)
