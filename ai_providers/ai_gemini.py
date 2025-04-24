@@ -156,10 +156,10 @@ class Gemini:
             if response.candidates:
                  # 检查完成原因
                  finish_reason = response.candidates[0].finish_reason
-                 if finish_reason == StopCandidateException.FinishReason.SAFETY:
+                 if finish_reason == genai.types.Candidate.FinishReason.SAFETY:
                      rsp = "抱歉，您的请求可能包含不安全内容，已被阻止。"
                      self.LOG.warning(f"Gemini 请求被安全策略阻止 (wxid: {wxid})")
-                 elif finish_reason == StopCandidateException.FinishReason.RECITATION:
+                 elif finish_reason == genai.types.Candidate.FinishReason.RECITATION:
                       rsp = "抱歉，回答可能包含受版权保护的内容，已被部分阻止。"
                       self.LOG.warning(f"Gemini 响应因引用保护被阻止 (wxid: {wxid})")
                  elif response.text:
