@@ -107,6 +107,13 @@ deepseek:  # -----deepseek配置这行不填-----
   show_reasoning: false  # 是否在回复中显示思维过程，仅在启用思维链功能时有效
   max_history_messages: 10 # <--- 添加这一行，设置 DeepSeek 最多回顾 10 条历史消息
 
+gemini:  # -----gemini配置-----
+  api_key: "YOUR_GOOGLE_API_KEY"  # 必须
+  model_name: "gemini-1.5-pro-latest" # 可选, 默认是 "gemini-1.5-pro-latest"
+  prompt: "你是一个AI助手，请用通俗易懂的语言回答用户的问题。" # 可选
+  proxy: "http://127.0.0.1:7890" # 可选, 代理地址
+  max_history_messages: 20 # 可选, 对话历史长度
+
 aliyun_image:  # -----如果要使用阿里云文生图，取消下面的注释并填写相关内容，模型到阿里云百炼找通义万相-文生图2.1-Turbo-----
   enable: true  # 是否启用阿里文生图功能，false为关闭，默认开启，如果未配置，则会将消息发送给聊天大模型
   api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx  # 替换为你的DashScope API密钥

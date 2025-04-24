@@ -41,4 +41,5 @@ class Config(object):
         self.PERPLEXITY = yconfig.get("perplexity", {})
         self.ALIYUN_IMAGE = yconfig.get("aliyun_image", {})
         self.GEMINI_IMAGE = yconfig.get("gemini_image", {})
+        self.GEMINI = yconfig.get("gemini", {})
         self.SEND_RATE_LIMIT = yconfig.get("send_rate_limit", 0)

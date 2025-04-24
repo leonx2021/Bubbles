@@ -16,6 +16,7 @@ from wcferry import Wcf, WxMsg
 
 from ai_providers.ai_chatgpt import ChatGPT
 from ai_providers.ai_deepseek import DeepSeek
+from ai_providers.ai_gemini import Gemini
 from ai_providers.ai_perplexity import Perplexity
 from function.func_weather import Weather
 from function.func_news import News
@@ -91,6 +92,19 @@ class Robot(Job):
                  self.LOG.info(f"已加载 DeepSeek 模型")
             except Exception as e:
                  self.LOG.error(f"初始化 DeepSeek 模型时出错: {str(e)}")
+        
+        # 初始化Gemini
+        if Gemini.value_check(self.config.GEMINI):
+            try:
+                # 传入 message_summary 和 wxid
+                self.chat_models[ChatType.GEMINI.value] = Gemini(
+                    self.config.GEMINI,
+                    message_summary_instance=self.message_summary,
+                    bot_wxid=self.wxid
+                )
+                self.LOG.info(f"已加载 Gemini 模型")
+            except Exception as e:
+                self.LOG.error(f"初始化 Gemini 模型时出错: {str(e)}")
             
         # 初始化Perplexity
         if Perplexity.value_check(self.config.PERPLEXITY):
