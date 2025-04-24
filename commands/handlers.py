@@ -268,6 +268,11 @@ def handle_chitchat(ctx: 'MessageContext', match: Optional[Match]) -> bool:
         ctx.send_text("抱歉，我现在无法进行对话。")
         return False
     
+    # 获取特定的历史消息数量限制
+    specific_max_history = getattr(ctx, 'specific_max_history', None)
+    if ctx.logger and specific_max_history is not None:
+        ctx.logger.debug(f"为 {ctx.get_receiver()} 使用特定历史限制: {specific_max_history}")
+    
     #  处理引用图片情况
     if getattr(ctx, 'is_quoted_image', False):
         ctx.logger.info("检测到引用图片消息，尝试处理图片内容...")
@@ -374,7 +379,12 @@ def handle_chitchat(ctx: 'MessageContext', match: Optional[Match]) -> bool:
         if ctx.logger:
             ctx.logger.info(f"【发送内容】将以下消息发送给AI: \n{q_with_info}")
         
-        rsp = chat_model.get_answer(q_with_info, ctx.get_receiver())
+        # 调用AI模型，传递特定历史限制
+        rsp = chat_model.get_answer(
+            question=q_with_info, 
+            wxid=ctx.get_receiver(),
+            specific_max_history=specific_max_history
+        )
         
         if rsp:
             # 发送回复
@@ -547,7 +557,13 @@ def handle_perplexity_ask(ctx: 'MessageContext', match: Optional[Match]) -> bool
                 # 调用 AI 模型时传入备选 prompt
                 # 需要调整 get_answer 方法以支持 system_prompt_override 参数
                 # 这里我们假设已对各AI模型实现了这个参数
-                rsp = chat_model.get_answer(q_with_info, ctx.get_receiver(), system_prompt_override=fallback_prompt)
+                specific_max_history = getattr(ctx, 'specific_max_history', None)
+                rsp = chat_model.get_answer(
+                    question=q_with_info, 
+                    wxid=ctx.get_receiver(), 
+                    system_prompt_override=fallback_prompt,
+                    specific_max_history=specific_max_history
+                )
                 
                 if rsp:
                     # 发送回复

@@ -181,24 +181,29 @@ class Robot(Job):
             # 2. 根据消息来源选择使用的AI模型
             self._select_model_for_message(msg)
             
-            # 3. 预处理消息，生成MessageContext
-            ctx = self.preprocess(msg)
-            # 确保context能访问到当前选定的chat模型
-            setattr(ctx, 'chat', self.chat)
+            # 3. 获取本次对话特定的历史消息限制
+            specific_limit = self._get_specific_history_limit(msg)
+            self.LOG.debug(f"本次对话 ({msg.sender} in {msg.roomid or msg.sender}) 使用历史限制: {specific_limit}")
             
-            # 4. 使用命令路由器分发处理消息
+            # 4. 预处理消息，生成MessageContext
+            ctx = self.preprocess(msg)
+            # 确保context能访问到当前选定的chat模型及特定历史限制
+            setattr(ctx, 'chat', self.chat)
+            setattr(ctx, 'specific_max_history', specific_limit)
+            
+            # 5. 使用命令路由器分发处理消息
             handled = self.command_router.dispatch(ctx)
             
-            # 5. 如果没有命令处理器处理，则进行特殊逻辑处理
+            # 6. 如果没有命令处理器处理，则进行特殊逻辑处理
             if not handled:
-                # 5.1 好友请求自动处理
+                # 6.1 好友请求自动处理
                 if msg.type == 37:  # 好友请求
                     self.autoAcceptFriendRequest(msg)
                     return
                     
-                # 5.2 系统消息处理
+                # 6.2 系统消息处理
                 elif msg.type == 10000:
-                    # 5.2.1 处理新成员入群
+                    # 6.2.1 处理新成员入群
                     if "加入了群聊" in msg.content and msg.from_group():
                         new_member_match = re.search(r'"(.+?)"邀请"(.+?)"加入了群聊', msg.content)
                         if new_member_match:
@@ -209,26 +214,26 @@ class Robot(Job):
                             self.sendTextMsg(welcome_msg, msg.roomid)
                             self.LOG.info(f"已发送欢迎消息给新成员 {new_member} 在群 {msg.roomid}")
                         return
-                    # 5.2.2 处理新好友添加
+                    # 6.2.2 处理新好友添加
                     elif "你已添加了" in msg.content:
                         self.sayHiToNewFriend(msg)
                         return
                 
-                # 5.3 群聊消息，且配置了响应该群
+                # 6.3 群聊消息，且配置了响应该群
                 if msg.from_group() and msg.roomid in self.config.GROUPS:
                     # 如果在群里被@了，但命令路由器没有处理，则进行闲聊
                     if msg.is_at(self.wxid):
-                        # 调用handle_chitchat函数处理闲聊
+                        # 调用handle_chitchat函数处理闲聊，传递完整的上下文
                         handle_chitchat(ctx, None)
                     else:
                         pass
                         
-                # 5.4 私聊消息，未被命令处理，进行闲聊
+                # 6.4 私聊消息，未被命令处理，进行闲聊
                 elif not msg.from_group() and not msg.from_self():
                     # 检查是否是文本消息(type 1)或者是包含用户输入的类型49消息
                     if msg.type == 1 or (msg.type == 49 and ctx.text):
                         self.LOG.info(f"准备回复私聊消息: 类型={msg.type}, 文本内容='{ctx.text}'")
-                        # 调用handle_chitchat函数处理闲聊
+                        # 调用handle_chitchat函数处理闲聊，传递完整的上下文
                         handle_chitchat(ctx, None)
                     
         except Exception as e:
@@ -500,6 +505,45 @@ class Robot(Job):
         # 如果没有找到对应配置，使用默认模型
         if self.default_model_id in self.chat_models:
             self.chat = self.chat_models[self.default_model_id]
+            
+    def _get_specific_history_limit(self, msg: WxMsg) -> int:
+        """根据消息来源和配置，获取特定的历史消息数量限制
+        
+        :param msg: 微信消息对象
+        :return: 历史消息数量限制，如果没有特定配置则返回None
+        """
+        if not hasattr(self.config, 'GROUP_MODELS'):
+            # 没有配置，使用当前模型默认值
+            return getattr(self.chat, 'max_history_messages', None)
+            
+        # 获取消息来源ID
+        source_id = msg.roomid if msg.from_group() else msg.sender
+        
+        # 确定查找的映射和字段名
+        if msg.from_group():
+            mappings = self.config.GROUP_MODELS.get('mapping', [])
+            key_field = 'room_id'
+        else:
+            mappings = self.config.GROUP_MODELS.get('private_mapping', [])
+            key_field = 'wxid'
+            
+        # 在映射中查找特定配置
+        for mapping in mappings:
+            if mapping.get(key_field) == source_id:
+                # 找到了对应的配置
+                if 'max_history' in mapping:
+                    specific_limit = mapping['max_history']
+                    self.LOG.debug(f"为 {source_id} 找到特定历史限制: {specific_limit}")
+                    return specific_limit
+                else:
+                    # 找到了配置但没有max_history，使用模型默认值
+                    self.LOG.debug(f"为 {source_id} 找到映射但无特定历史限制，使用模型默认值")
+                    break
+                    
+        # 没有找到特定限制，使用当前模型的默认值
+        default_limit = getattr(self.chat, 'max_history_messages', None)
+        self.LOG.debug(f"未找到 {source_id} 的特定历史限制，使用模型默认值: {default_limit}")
+        return default_limit
 
     def onMsg(self, msg: WxMsg) -> int:
         try:

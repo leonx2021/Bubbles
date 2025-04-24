@@ -56,7 +56,7 @@ class ChatGPT():
                 return True
         return False
 
-    def get_answer(self, question: str, wxid: str, system_prompt_override=None) -> str:
+    def get_answer(self, question: str, wxid: str, system_prompt_override=None, specific_max_history=None) -> str:
         # 获取并格式化数据库历史记录 
         api_messages = []
 
@@ -76,10 +76,16 @@ class ChatGPT():
             history = self.message_summary.get_messages(wxid)
 
             # -限制历史消息数量
-            if self.max_history_messages is not None and self.max_history_messages > 0:
-                 history = history[-self.max_history_messages:] # 取最新的 N 条
-            elif self.max_history_messages == 0: # 如果设置为0，则不包含历史
+            # 优先使用传入的特定限制，如果没有则使用模型默认限制
+            limit_to_use = specific_max_history if specific_max_history is not None else self.max_history_messages
+            self.LOG.debug(f"获取历史记录 for {wxid}, 原始条数: {len(history)}, 使用限制: {limit_to_use}")
+            
+            if limit_to_use is not None and limit_to_use > 0:
+                 history = history[-limit_to_use:] # 取最新的 N 条
+            elif limit_to_use == 0: # 如果设置为0，则不包含历史
                  history = []
+                 
+            self.LOG.debug(f"应用限制后历史条数: {len(history)}")
 
             for msg in history:
                 role = "assistant" if msg.get("sender_wxid") == self.bot_wxid else "user"
