@@ -268,7 +268,7 @@ def handle_chitchat(ctx: 'MessageContext', match: Optional[Match]) -> bool:
         ctx.send_text("抱歉，我现在无法进行对话。")
         return False
     
-    # ---- 处理引用图片情况 ----
+    #  处理引用图片情况
     if getattr(ctx, 'is_quoted_image', False):
         ctx.logger.info("检测到引用图片消息，尝试处理图片内容...")
         
@@ -342,7 +342,6 @@ def handle_chitchat(ctx: 'MessageContext', match: Optional[Match]) -> bool:
             ctx.logger.error(f"处理引用图片过程中出错: {e}")
             ctx.send_text(f"处理图片时发生错误: {str(e)}")
             return True  # 已处理，即使出错也不执行后续普通文本处理
-    # ---- 引用图片处理结束 ----
     
     # 获取消息内容
     content = ctx.text
@@ -684,7 +683,7 @@ def handle_reminder(ctx: 'MessageContext', match: Optional[Match]) -> bool:
             ctx.send_text("🤔 嗯... 我好像没太明白您想设置什么提醒，可以换种方式再说一次吗？", at_list)
             return True
 
-        # ---- 批量处理提醒 ----
+        # 批量处理提醒 
         results = [] # 用于存储每个提醒的处理结果
         roomid = ctx.msg.roomid if ctx.is_group else None
 
@@ -739,7 +738,7 @@ def handle_reminder(ctx: 'MessageContext', match: Optional[Match]) -> bool:
                 results.append({"label": reminder_label, "success": False, "error": validation_error, "data": data})
                 if ctx.logger: ctx.logger.warning(f"提醒数据验证失败 ({reminder_label}): {validation_error} - Data: {data}")
 
-        # ---- 构建汇总反馈消息 ----
+        # 构建汇总反馈消息 
         reply_parts = []
         successful_count = sum(1 for res in results if res["success"])
         failed_count = len(results) - successful_count

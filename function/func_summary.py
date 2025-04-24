@@ -39,7 +39,6 @@ class MessageSummary:
             self.cursor = self.conn.cursor()
             self.LOG.info(f"已连接到 SQLite 数据库: {self.db_path}")
 
-            # ---- 修改数据库表结构 ----
             # 检查并添加 sender_wxid 列 (如果不存在)
             self.cursor.execute("PRAGMA table_info(messages)")
             columns = [col[1] for col in self.cursor.fetchall()]
@@ -67,7 +66,6 @@ class MessageSummary:
                     timestamp_str TEXT NOT NULL -- 存储完整时间格式 YYYY-MM-DD HH:MM:SS
                 )
             """)
-            # ---- 数据库表结构修改结束 ----
 
             self.cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_chat_time ON messages (chat_id, timestamp_float)
@@ -96,7 +94,6 @@ class MessageSummary:
             except sqlite3.Error as e:
                 self.LOG.error(f"关闭数据库连接时出错: {e}")
 
-    # ---- 修改 record_message ----
     def record_message(self, chat_id, sender_name, sender_wxid, content, timestamp=None):
         """记录单条消息到数据库
 
@@ -110,7 +107,6 @@ class MessageSummary:
         try:
             current_time_float = time.time()
 
-            # ---- 修改时间格式 ----
             if not timestamp:
                 # 默认使用完整时间格式
                 timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time_float))
@@ -132,7 +128,6 @@ class MessageSummary:
                 INSERT INTO messages (chat_id, sender, sender_wxid, content, timestamp_float, timestamp_str)
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (chat_id, sender_name, sender_wxid, content, current_time_float, timestamp_str))
-            # ---- 时间格式和插入修改结束 ----
 
             # 删除超出 max_history 的旧消息
             self.cursor.execute("""
@@ -154,7 +149,6 @@ class MessageSummary:
                 self.conn.rollback()
             except:
                 pass
-    # ---- record_message 修改结束 ----
 
     def clear_message_history(self, chat_id):
         """清除指定聊天的消息历史记录
@@ -194,7 +188,6 @@ class MessageSummary:
             self.LOG.error(f"获取消息数量时出错 (chat_id={chat_id}): {e}")
             return 0
 
-    # ---- 修改 get_messages ----
     def get_messages(self, chat_id):
         """获取指定聊天的所有消息 (按时间升序)，包含发送者wxid和完整时间戳
 
@@ -230,7 +223,6 @@ class MessageSummary:
             self.LOG.error(f"获取消息列表时出错 (chat_id={chat_id}): {e}")
 
         return messages
-    # ---- get_messages 修改结束 ----
 
     def _basic_summarize(self, messages):
         """基本的消息总结逻辑，不使用AI
@@ -322,7 +314,6 @@ class MessageSummary:
         else:
             return self._basic_summarize(messages)
 
-    # ---- 修改 process_message_from_wxmsg ----
     def process_message_from_wxmsg(self, msg, wcf, all_contacts, bot_wxid=None):
         """从微信消息对象中处理并记录与总结相关的文本消息
         记录所有群聊和私聊的文本(1)和App/卡片(49)消息。
@@ -342,13 +333,11 @@ class MessageSummary:
             self.LOG.warning(f"无法确定消息的chat_id (msg.id={msg.id}), 跳过记录")
             return
 
-        # ---- 获取 sender_wxid ----
         sender_wxid = msg.sender
         if not sender_wxid:
              # 理论上不应发生，但做个防护
              self.LOG.error(f"消息 (id={msg.id}) 缺少 sender wxid，无法记录！")
              return
-        # ---- 获取 sender_wxid 结束 ----
 
         # 确定发送者名称 (逻辑不变)
         sender_name = ""
@@ -467,9 +456,6 @@ class MessageSummary:
         # 获取当前时间字符串 (使用完整格式)
         current_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
-        # ---- 修改记录调用 ----
         self.LOG.debug(f"记录消息 (来源: {source_info}, 类型: {'群聊' if msg.from_group() else '私聊'}): '[{current_time_str}]{sender_name}({sender_wxid}): {content_to_record}' (来自 msg.id={msg.id})")
         # 调用 record_message 时传入 sender_wxid
         self.record_message(chat_id, sender_name, sender_wxid, content_to_record, current_time_str)
-        # ---- 记录调用修改结束 ----
-    # ---- process_message_from_wxmsg 修改结束 ----

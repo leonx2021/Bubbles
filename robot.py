@@ -288,7 +288,6 @@ class Robot(Job):
                 self.LOG.info(f"To {receiver}:\n{ats}\n{msg}")
                 self.wcf.send_text(full_msg_content, receiver, at_list)
 
-            # ---- 修改记录逻辑 ----
             if self.message_summary: # 检查 message_summary 是否初始化成功
                  # 确定机器人的名字
                  robot_name = self.allContacts.get(self.wxid, "机器人")
@@ -303,7 +302,6 @@ class Robot(Job):
                  self.LOG.debug(f"已记录机器人发送的消息到 {receiver}")
             else:
                 self.LOG.warning("MessageSummary 未初始化，无法记录发送的消息")
-            # ---- 记录逻辑修改结束 ----
 
         except Exception as e:
             self.LOG.error(f"发送消息失败: {e}")
