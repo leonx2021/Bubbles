@@ -76,7 +76,7 @@ class Gemini:
                 system_instruction=self._base_prompt,
                 safety_settings=self.SAFETY_SETTINGS # 应用安全设置
             )
-            self.LOG.info(f"Gemini 模型 {self._model_name} 初始化成功，基础提示: '{self._base_prompt}'")
+            self.LOG.info(f"已加载 Gemini 模型")
 
             # 4. 检查视觉能力 (依赖模型名称的简单检查)
             # 注意：更可靠的方式是调用 list_models 并检查支持的方法
