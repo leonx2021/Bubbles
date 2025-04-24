@@ -71,7 +71,7 @@ class DeepSeek():
         if self.message_summary and self.bot_wxid:
             history = self.message_summary.get_messages(wxid)
 
-            # 限制历史消息数量 
+            # 限制历史消息数量
             if self.max_history_messages is not None and self.max_history_messages > 0:
                  history = history[-self.max_history_messages:] # 取最新的 N 条
             elif self.max_history_messages == 0: # 如果设置为0，则不包含历史
@@ -79,9 +79,14 @@ class DeepSeek():
 
             for msg in history:
                 role = "assistant" if msg.get("sender_wxid") == self.bot_wxid else "user"
-                formatted_content = msg.get('content', '')
-                if formatted_content:
-                    api_messages.append({"role": role, "content": formatted_content})
+                content = msg.get('content', '')
+                if content:
+                    if role == "user":
+                        sender_name = msg.get('sender', '未知用户') # 获取发送者名字
+                        formatted_content = f"{sender_name}: {content}" # 格式化内容
+                        api_messages.append({"role": role, "content": formatted_content})
+                    else: # 助手消息
+                         api_messages.append({"role": role, "content": content})
         else:
             self.LOG.warning(f"无法为 wxid={wxid} 获取历史记录，因为 message_summary 或 bot_wxid 未设置。")
 
