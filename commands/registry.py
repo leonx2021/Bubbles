@@ -25,16 +25,6 @@ COMMANDS = [
         description="显示机器人的帮助信息"
     ),
     
-    Command(
-        name="reset_memory",
-        pattern=re.compile(r"^(reset|重置)$", re.IGNORECASE),
-        scope="both",       # 群聊和私聊都支持
-        need_at=True,       # 需要@机器人
-        priority=20,        # 优先级较高
-        handler=handle_reset_memory,
-        description="重置机器人缓存里的上下文历史"
-    ),
-    
     # ======== Perplexity AI 命令 ========
     Command(
         name="perplexity_ask",
@@ -102,7 +92,7 @@ COMMANDS = [
     # ======== 新闻和实用工具 ========
     Command(
         name="weather_forecast",
-        pattern=re.compile(r"^(?:天气预报|预报)\s+(.+)$"), # 匹配 天气预报/预报 城市名
+        pattern=re.compile(r"^(?:天气预报|天气)\s+(.+)$"), # 匹配 天气预报/预报 城市名
         scope="both",      # 群聊和私聊都支持
         need_at=True,      # 需要@机器人
         priority=38,       # 优先级比天气高一点

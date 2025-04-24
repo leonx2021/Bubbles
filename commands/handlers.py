@@ -3,12 +3,8 @@ import random
 from typing import Optional, Match, Dict, Any
 import json # 确保已导入json
 from datetime import datetime # 确保已导入datetime
-import os # 导入os模块用于文件路径操作
-from function.func_duel import DuelRankSystem 
-
-# 导入AI模型
-from ai_providers.ai_deepseek import DeepSeek
-from ai_providers.ai_chatgpt import ChatGPT  
+# import os # 导入os模块用于文件路径操作
+# from function.func_duel import DuelRankSystem 
 
 # 前向引用避免循环导入
 from typing import TYPE_CHECKING
@@ -46,7 +42,6 @@ def handle_help(ctx: 'MessageContext', match: Optional[Match]) -> bool:
         "【群聊工具】",
         "- summary/总结",
         "- clearmessages/清除历史",
-        "- reset/重置",
         ""
     ]
     help_text = "\n".join(help_text)
@@ -90,63 +85,6 @@ def handle_check_equipment(ctx: 'MessageContext', match: Optional[Match]) -> boo
         if ctx.logger:
             ctx.logger.error(f"查看装备出错: {e}")
         ctx.send_text("⚠️ 查看装备失败")
-        return False
-
-def handle_reset_memory(ctx: 'MessageContext', match: Optional[Match]) -> bool:
-    """
-    处理 "重置记忆" 命令
-    
-    匹配: reset/重置/重置记忆
-    """
-    chat_id = ctx.get_receiver()
-    chat_model = ctx.chat  # 使用上下文中的chat模型
-    
-    if not chat_model:
-        ctx.send_text("⚠️ 未配置AI模型，无需重置")
-        return True
-        
-    try:
-        # 检查并调用不同AI模型的清除记忆方法
-        if hasattr(chat_model, 'conversation_list') and chat_id in getattr(chat_model, 'conversation_list', {}):
-            # 判断是哪种类型的模型并执行相应的重置操作
-            model_name = chat_model.__class__.__name__
-            
-            if isinstance(chat_model, DeepSeek):
-                # DeepSeek模型
-                del chat_model.conversation_list[chat_id]
-                if ctx.logger: ctx.logger.info(f"已重置DeepSeek对话记忆: {chat_id}")
-                result = "✅ 已重置DeepSeek对话记忆，开始新的对话"
-                
-            elif isinstance(chat_model, ChatGPT):
-                # ChatGPT模型
-                # 保留系统提示，删除其他历史
-                if len(chat_model.conversation_list[chat_id]) > 0:
-                    system_msgs = [msg for msg in chat_model.conversation_list[chat_id] if msg["role"] == "system"]
-                    chat_model.conversation_list[chat_id] = system_msgs
-                    if ctx.logger: ctx.logger.info(f"已重置ChatGPT对话记忆(保留系统提示): {chat_id}")
-                    result = "✅ 已重置ChatGPT对话记忆，保留系统提示，开始新的对话"
-                else:
-                    result = f"⚠️ {model_name} 对话记忆已为空，无需重置"
-            
-            else:
-                # 通用处理方式：直接删除对话记录
-                del chat_model.conversation_list[chat_id]
-                if ctx.logger: ctx.logger.info(f"已通过通用方式重置{model_name}对话记忆: {chat_id}")
-                result = f"✅ 已重置{model_name}对话记忆，开始新的对话"
-        else:
-            # 对于没有找到会话记录的情况
-            model_name = chat_model.__class__.__name__ if chat_model else "未知模型"
-            if ctx.logger: ctx.logger.info(f"未找到{model_name}对话记忆: {chat_id}")
-            result = f"⚠️ 未找到与{model_name}的对话记忆，无需重置"
-        
-        # 发送结果消息
-        ctx.send_text(result)
-        
-        return True
-        
-    except Exception as e:
-        if ctx.logger: ctx.logger.error(f"重置对话记忆失败: {e}")
-        ctx.send_text(f"❌ 重置对话记忆失败: {e}")
         return False
 
 def handle_summary(ctx: 'MessageContext', match: Optional[Match]) -> bool:
