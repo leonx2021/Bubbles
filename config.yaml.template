@@ -61,14 +61,18 @@ groups:
     mapping:
       - room_id: example12345@chatroom
         model: 2  
+        max_history: 30  # 回顾最近30条消息
       - room_id: example12345@chatroom 
         model: 7  
+        max_history: 30  # 回顾最近30条消息
     # 私聊映射
     private_mapping:
       - wxid: filehelper
         model: 2  
+        max_history: 30  # 回顾最近30条消息
       - wxid: wxid_example12345
         model: 8 
+        max_history: 30  # 回顾最近30条消息
 
 MAX_HISTORY: 300 # 记录数据库的消息历史
 

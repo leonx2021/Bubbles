@@ -116,13 +116,12 @@ Bubbles 是一个功能丰富的微信机器人框架，基于 [wcferry](https:/
 ```yaml
 # ChatGPT 配置
 CHATGPT:
-  key: "your-openai-api-key"
-  base_url: "https://api.openai.com/v1"
-  model: "gpt-4o-mini"  # 可选：gpt-4, gpt-3.5-turbo 等
-  temperature: 0.7
-  max_tokens: 2000
-  system_prompt: "你是一个有用的助手。"
+  key: "your-openai-api-key" # 填写你 ChatGPT 的 key
+  api: "https://api.openai.com/v1"
+  model: "gpt-4.1-mini"  # 可选：gpt-4, gpt-3.5-turbo 等
   proxy: "http://127.0.0.1:7890"  # 可选：如需代理请填写
+  system_prompt: "你是一个有用的助手。"
+  max_history_messages: 20 # 设置 ChatGPT 默认最多回顾 20 条历史消息
 ```
 
 #### 群组/私聊模型映射
@@ -133,17 +132,19 @@ CHATGPT:
 # 群组模型配置
 GROUP_MODELS:
   # 默认模型 ID
-  default: 21  # 2 代表 CHATGPT
+  default: 1  # 1 代表 CHATGPT
   
   # 群聊模型映射
   mapping:
     - room_id: "12345678@chatroom"  # 群聊 ID
-      model: 2  # 2 代表 CHATGPT
+      model: 1  # 1 代表 CHATGPT
+      max_history: 30  # 回顾最近30条消息
 
   # 私聊模型映射
   private_mapping:
     - wxid: "wxid_abc123"  # 用户 wxid
-      model: 8  # 8 代表 Deepseek
+      model: 2  # 2 代表 Deepseek
+      max_history: 50  # 回顾最近50条消息
 ```
 
 #### 功能开关
@@ -193,7 +194,7 @@ python main.py
 - `天气 城市名`、`温度 城市名` - 查询指定城市的当前天气
 - `新闻` - 获取最新新闻
 
-##### 决斗系统命令
+##### 决斗系统命令（默认关闭）
 - `决斗 @用户名` - 发起决斗（仅群聊）
 - `偷袭 @用户名`、`偷分 @用户名` - 偷袭其他玩家（仅群聊）
 - `决斗排行`、`决斗排名`、`排行榜` - 查看决斗排行榜（仅群聊）
