@@ -38,6 +38,8 @@ Bubbles 是一个功能丰富的微信机器人框架，基于 [wcferry](https:/
 
 #### 案例演示：使用自然语言设置提醒
 
+结构：用户输入 -> agent分析 -> agent格式化输出 -> 选择函数 -> 函数调用 -> 结果回调
+
 <img src="img_1.jpg" width="400"/> 
 
 <img src="img_2.jpg" width="400"/> 
