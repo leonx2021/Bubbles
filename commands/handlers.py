@@ -26,14 +26,14 @@ def handle_help(ctx: 'MessageContext', match: Optional[Match]) -> bool:
         "- 新闻",
         "- ask [问题]",
         "",
-        # "【决斗 & 偷袭】",
-        # "- 决斗@XX",
-        # "- 偷袭@XX",
-        # "- 决斗排行/排行榜",
-        # "- 我的战绩/决斗战绩",
-        # "- 我的装备/查看装备",
-        # "- 改名 [旧名] [新名]",
-        # "",
+        "【决斗 & 偷袭】",
+        "- 决斗@XX",
+        "- 偷袭@XX",
+        "- 决斗排行/排行榜",
+        "- 我的战绩/决斗战绩",
+        "- 我的装备/查看装备",
+        "- 改名 [旧名] [新名]",
+        "",
         "【提醒】",
         "- 提醒xxxxx：一次性、每日、每周",
         "- 查看提醒/我的提醒/提醒列表",
@@ -1113,287 +1113,287 @@ def handle_weather_forecast(ctx: 'MessageContext', match: Optional[Match]) -> bo
 
 
 
-# def handle_duel(ctx: 'MessageContext', match: Optional[Match]) -> bool:
-#     """
-#     处理 "决斗" 命令
+def handle_duel(ctx: 'MessageContext', match: Optional[Match]) -> bool:
+    """
+    处理 "决斗" 命令
     
-#     匹配: 决斗@XX 或 决斗和XX 等
-#     """
-#     if not ctx.is_group:
-#         ctx.send_text("❌ 决斗功能只支持群聊")
-#         return True
+    匹配: 决斗@XX 或 决斗和XX 等
+    """
+    if not ctx.is_group:
+        ctx.send_text("❌ 决斗功能只支持群聊")
+        return True
     
-#     if not match:
-#         return False
+    if not match:
+        return False
     
-#     # 获取对手名称
-#     opponent_name_input = match.group(1).strip()
+    # 获取对手名称
+    opponent_name_input = match.group(1).strip()
     
-#     if ctx.logger:
-#         ctx.logger.info(f"决斗指令匹配: 对手={opponent_name_input}, 发起者={ctx.sender_name}")
+    if ctx.logger:
+        ctx.logger.info(f"决斗指令匹配: 对手={opponent_name_input}, 发起者={ctx.sender_name}")
     
-#     # 寻找群内对应的成员 (优先完全匹配，其次部分匹配)
-#     opponent_wxid = None
-#     opponent_name = None
+    # 寻找群内对应的成员 (优先完全匹配，其次部分匹配)
+    opponent_wxid = None
+    opponent_name = None
     
-#     # 第一次遍历：寻找完全匹配
-#     for member_wxid, member_name in ctx.room_members.items():
-#         if opponent_name_input == member_name:
-#             opponent_wxid = member_wxid
-#             opponent_name = member_name
-#             if ctx.logger:
-#                 ctx.logger.info(f"找到完全匹配对手: {opponent_name}")
-#             break
+    # 第一次遍历：寻找完全匹配
+    for member_wxid, member_name in ctx.room_members.items():
+        if opponent_name_input == member_name:
+            opponent_wxid = member_wxid
+            opponent_name = member_name
+            if ctx.logger:
+                ctx.logger.info(f"找到完全匹配对手: {opponent_name}")
+            break
     
-#     # 如果没有找到完全匹配，再寻找部分匹配
-#     if not opponent_wxid:
-#         for member_wxid, member_name in ctx.room_members.items():
-#             if opponent_name_input in member_name:
-#                 opponent_wxid = member_wxid
-#                 opponent_name = member_name
-#                 if ctx.logger:
-#                     ctx.logger.info(f"未找到完全匹配，使用部分匹配对手: {opponent_name}")
-#                 break
+    # 如果没有找到完全匹配，再寻找部分匹配
+    if not opponent_wxid:
+        for member_wxid, member_name in ctx.room_members.items():
+            if opponent_name_input in member_name:
+                opponent_wxid = member_wxid
+                opponent_name = member_name
+                if ctx.logger:
+                    ctx.logger.info(f"未找到完全匹配，使用部分匹配对手: {opponent_name}")
+                break
     
-#     if not opponent_wxid:
-#         ctx.send_text(f"❌ 没有找到名为 {opponent_name_input} 的群成员")
-#         return True
+    if not opponent_wxid:
+        ctx.send_text(f"❌ 没有找到名为 {opponent_name_input} 的群成员")
+        return True
     
-#     # 获取挑战者昵称
-#     challenger_name = ctx.sender_name
-#     group_id = ctx.msg.roomid
+    # 获取挑战者昵称
+    challenger_name = ctx.sender_name
+    group_id = ctx.msg.roomid
 
-#     # --- 新增：决斗资格检查 (包括分数和 Boss 战) ---
-#     try:
-#         rank_system = DuelRankSystem(group_id)
-#         # 获取双方玩家数据和分数
-#         challenger_data = rank_system.get_player_data(challenger_name)
-#         opponent_data = rank_system.get_player_data(opponent_name)
-#         challenger_score = challenger_data.get("score", 0)
-#         opponent_score = opponent_data.get("score", 0)
+    # --- 新增：决斗资格检查 (包括分数和 Boss 战) ---
+    try:
+        rank_system = DuelRankSystem(group_id)
+        # 获取双方玩家数据和分数
+        challenger_data = rank_system.get_player_data(challenger_name)
+        opponent_data = rank_system.get_player_data(opponent_name)
+        challenger_score = challenger_data.get("score", 0)
+        opponent_score = opponent_data.get("score", 0)
 
-#         is_boss_battle = (opponent_name == "泡泡")
+        is_boss_battle = (opponent_name == "泡泡")
 
-#         # 检查 Boss 战资格 (仅检查挑战者分数)
-#         if is_boss_battle and challenger_score < 100:
-#             funny_messages = [
-#                 f"嘿，{challenger_name}！你当前的积分 ({challenger_score}) 还没攒够挑战大魔王 '泡泡' 的勇气呢！先去决斗场练练级吧！💪",
-#                 f"勇士 {challenger_name} ({challenger_score}分)，强大的 '泡泡' 觉得你还需要更多历练才能与之一战。先去赚点积分壮壮胆吧！💰",
-#                 f"({challenger_score}分) 就想挑战 Boss '泡泡'？{challenger_name}，你这是要去送人头吗？'泡泡' 表示太弱了，拒绝接待！🚫",
-#                 f"挑战 Boss '泡泡' 需要至少100积分作为门票，{challenger_name} ({challenger_score}分) 好像还差一点点哦~ 😉",
-#                 f"'泡泡' 正在冥想，感觉到 {challenger_name} 的力量 ({challenger_score}分) 尚不足以撼动祂，让你再修炼修炼。🧘"
-#             ]
-#             message = random.choice(funny_messages)
-#             ctx.send_text(message)
-#             if ctx.logger:
-#                 ctx.logger.info(f"玩家 {challenger_name} 积分 {challenger_score} 不足100，阻止发起 Boss 战")
-#             return True # 命令已处理，阻止后续逻辑
+        # 检查 Boss 战资格 (仅检查挑战者分数)
+        if is_boss_battle and challenger_score < 100:
+            funny_messages = [
+                f"嘿，{challenger_name}！你当前的积分 ({challenger_score}) 还没攒够挑战大魔王 '泡泡' 的勇气呢！先去决斗场练练级吧！💪",
+                f"勇士 {challenger_name} ({challenger_score}分)，强大的 '泡泡' 觉得你还需要更多历练才能与之一战。先去赚点积分壮壮胆吧！💰",
+                f"({challenger_score}分) 就想挑战 Boss '泡泡'？{challenger_name}，你这是要去送人头吗？'泡泡' 表示太弱了，拒绝接待！🚫",
+                f"挑战 Boss '泡泡' 需要至少100积分作为门票，{challenger_name} ({challenger_score}分) 好像还差一点点哦~ 😉",
+                f"'泡泡' 正在冥想，感觉到 {challenger_name} 的力量 ({challenger_score}分) 尚不足以撼动祂，让你再修炼修炼。🧘"
+            ]
+            message = random.choice(funny_messages)
+            ctx.send_text(message)
+            if ctx.logger:
+                ctx.logger.info(f"玩家 {challenger_name} 积分 {challenger_score} 不足100，阻止发起 Boss 战")
+            return True # 命令已处理，阻止后续逻辑
 
-#         # 检查普通决斗资格 (检查双方分数)
-#         elif not is_boss_battle and (challenger_score < 100 or opponent_score < 100):
-#             low_score_player = ""
-#             low_score_value = 0
-#             if challenger_score < 100 and opponent_score < 100:
-#                  low_score_player = f"{challenger_name} ({challenger_score}分) 和 {opponent_name} ({opponent_score}分) 都"
-#                  low_score_value = min(challenger_score, opponent_score) # 不重要，仅用于日志
-#             elif challenger_score < 100:
-#                  low_score_player = f"{challenger_name} ({challenger_score}分)"
-#                  low_score_value = challenger_score
-#             else: # opponent_score < 100
-#                  low_score_player = f"{opponent_name} ({opponent_score}分)"
-#                  low_score_value = opponent_score
+        # 检查普通决斗资格 (检查双方分数)
+        elif not is_boss_battle and (challenger_score < 100 or opponent_score < 100):
+            low_score_player = ""
+            low_score_value = 0
+            if challenger_score < 100 and opponent_score < 100:
+                 low_score_player = f"{challenger_name} ({challenger_score}分) 和 {opponent_name} ({opponent_score}分) 都"
+                 low_score_value = min(challenger_score, opponent_score) # 不重要，仅用于日志
+            elif challenger_score < 100:
+                 low_score_player = f"{challenger_name} ({challenger_score}分)"
+                 low_score_value = challenger_score
+            else: # opponent_score < 100
+                 low_score_player = f"{opponent_name} ({opponent_score}分)"
+                 low_score_value = opponent_score
             
-#             funny_messages = [
-#                 f"哎呀！{low_score_player} 的决斗积分还没到100分呢，好像还没做好上场的准备哦！😅",
-#                 f"等等！根据决斗场规则，{low_score_player} 的积分不足100分，暂时无法参与决斗。先去打打小怪兽吧！👾",
-#                 f"裁判举牌！🚩 {low_score_player} 决斗积分未满100，本场决斗无效！请先提升实力再来挑战！",
-#                 f"看起来 {low_score_player} 还是个决斗新手（积分不足100），先熟悉一下场地，找点低级对手练练手吧！😉",
-#                 f"呜~~~ 决斗场的能量保护罩拒绝了 {low_score_player}（积分不足100）进入！先去充点能（分）吧！⚡"
-#             ]
-#             message = random.choice(funny_messages)
-#             ctx.send_text(message)
-#             if ctx.logger:
-#                 ctx.logger.info(f"因玩家 {low_score_player} 积分 ({low_score_value}) 不足100，阻止发起普通决斗")
-#             return True # 命令已处理，阻止后续逻辑
+            funny_messages = [
+                f"哎呀！{low_score_player} 的决斗积分还没到100分呢，好像还没做好上场的准备哦！😅",
+                f"等等！根据决斗场规则，{low_score_player} 的积分不足100分，暂时无法参与决斗。先去打打小怪兽吧！👾",
+                f"裁判举牌！🚩 {low_score_player} 决斗积分未满100，本场决斗无效！请先提升实力再来挑战！",
+                f"看起来 {low_score_player} 还是个决斗新手（积分不足100），先熟悉一下场地，找点低级对手练练手吧！😉",
+                f"呜~~~ 决斗场的能量保护罩拒绝了 {low_score_player}（积分不足100）进入！先去充点能（分）吧！⚡"
+            ]
+            message = random.choice(funny_messages)
+            ctx.send_text(message)
+            if ctx.logger:
+                ctx.logger.info(f"因玩家 {low_score_player} 积分 ({low_score_value}) 不足100，阻止发起普通决斗")
+            return True # 命令已处理，阻止后续逻辑
 
-#     except Exception as e:
-#         if ctx.logger:
-#             ctx.logger.error(f"检查决斗资格时出错: {e}", exc_info=True)
-#         ctx.send_text("⚠️ 检查决斗资格时发生错误，请稍后再试。")
-#         return True # 出错也阻止后续逻辑
-#     # --- 决斗资格检查结束 ---
+    except Exception as e:
+        if ctx.logger:
+            ctx.logger.error(f"检查决斗资格时出错: {e}", exc_info=True)
+        ctx.send_text("⚠️ 检查决斗资格时发生错误，请稍后再试。")
+        return True # 出错也阻止后续逻辑
+    # --- 决斗资格检查结束 ---
 
-#     # 使用决斗管理器启动决斗 (只有通过所有检查才会执行到这里)
-#     if ctx.robot and hasattr(ctx.robot, "duel_manager"):
-#         duel_manager = ctx.robot.duel_manager
-#         # 注意：start_duel_thread 现在只会在资格检查通过后被调用
-#         if not duel_manager.start_duel_thread(challenger_name, opponent_name, group_id, True):
-#             ctx.send_text("⚠️ 目前有其他决斗正在进行中，请稍后再试！")
-#         # 决斗管理器内部会发送消息，所以这里不需要额外发送
+    # 使用决斗管理器启动决斗 (只有通过所有检查才会执行到这里)
+    if ctx.robot and hasattr(ctx.robot, "duel_manager"):
+        duel_manager = ctx.robot.duel_manager
+        # 注意：start_duel_thread 现在只会在资格检查通过后被调用
+        if not duel_manager.start_duel_thread(challenger_name, opponent_name, group_id, True):
+            ctx.send_text("⚠️ 目前有其他决斗正在进行中，请稍后再试！")
+        # 决斗管理器内部会发送消息，所以这里不需要额外发送
         
-#         return True
-#     else:
-#         # 如果没有决斗管理器，返回错误信息
-#         ctx.send_text("⚠️ 决斗系统未初始化")
-#         return False
+        return True
+    else:
+        # 如果没有决斗管理器，返回错误信息
+        ctx.send_text("⚠️ 决斗系统未初始化")
+        return False
 
-# def handle_sneak_attack(ctx: 'MessageContext', match: Optional[Match]) -> bool:
-#     """
-#     处理 "偷袭" 命令
+def handle_sneak_attack(ctx: 'MessageContext', match: Optional[Match]) -> bool:
+    """
+    处理 "偷袭" 命令
     
-#     匹配: 偷袭@XX 或 偷分@XX
-#     """
-#     if not ctx.is_group:
-#         ctx.send_text("❌ 偷袭功能只支持群聊哦。")
-#         return True
+    匹配: 偷袭@XX 或 偷分@XX
+    """
+    if not ctx.is_group:
+        ctx.send_text("❌ 偷袭功能只支持群聊哦。")
+        return True
     
-#     if not match:
-#         return False
+    if not match:
+        return False
     
-#     # 获取目标名称
-#     target_name = match.group(1).strip()
+    # 获取目标名称
+    target_name = match.group(1).strip()
     
-#     # 获取攻击者昵称
-#     attacker_name = ctx.sender_name
+    # 获取攻击者昵称
+    attacker_name = ctx.sender_name
     
-#     # 调用偷袭逻辑
-#     try:
-#         from function.func_duel import attempt_sneak_attack
-#         result_message = attempt_sneak_attack(attacker_name, target_name, ctx.msg.roomid)
+    # 调用偷袭逻辑
+    try:
+        from function.func_duel import attempt_sneak_attack
+        result_message = attempt_sneak_attack(attacker_name, target_name, ctx.msg.roomid)
         
-#         # 发送结果
-#         ctx.send_text(result_message)
+        # 发送结果
+        ctx.send_text(result_message)
         
-#         return True
-#     except Exception as e:
-#         if ctx.logger:
-#             ctx.logger.error(f"执行偷袭命令出错: {e}")
-#         ctx.send_text("⚠️ 偷袭功能出现错误")
-#         return False
+        return True
+    except Exception as e:
+        if ctx.logger:
+            ctx.logger.error(f"执行偷袭命令出错: {e}")
+        ctx.send_text("⚠️ 偷袭功能出现错误")
+        return False
 
-# def handle_duel_rank(ctx: 'MessageContext', match: Optional[Match]) -> bool:
-#     """
-#     处理 "决斗排行" 命令
+def handle_duel_rank(ctx: 'MessageContext', match: Optional[Match]) -> bool:
+    """
+    处理 "决斗排行" 命令
     
-#     匹配: 决斗排行/决斗排名/排行榜
-#     """
-#     if not ctx.is_group:
-#         ctx.send_text("❌ 决斗排行榜功能只支持群聊")
-#         return True
+    匹配: 决斗排行/决斗排名/排行榜
+    """
+    if not ctx.is_group:
+        ctx.send_text("❌ 决斗排行榜功能只支持群聊")
+        return True
     
-#     try:
-#         from function.func_duel import get_rank_list
-#         rank_list = get_rank_list(10, ctx.msg.roomid)  # 获取前10名排行
-#         ctx.send_text(rank_list)
+    try:
+        from function.func_duel import get_rank_list
+        rank_list = get_rank_list(10, ctx.msg.roomid)  # 获取前10名排行
+        ctx.send_text(rank_list)
         
-#         return True
-#     except Exception as e:
-#         if ctx.logger:
-#             ctx.logger.error(f"获取决斗排行榜出错: {e}")
-#         ctx.send_text("⚠️ 获取排行榜失败")
-#         return False
+        return True
+    except Exception as e:
+        if ctx.logger:
+            ctx.logger.error(f"获取决斗排行榜出错: {e}")
+        ctx.send_text("⚠️ 获取排行榜失败")
+        return False
 
-# def handle_duel_stats(ctx: 'MessageContext', match: Optional[Match]) -> bool:
-#     """
-#     处理 "决斗战绩" 命令
+def handle_duel_stats(ctx: 'MessageContext', match: Optional[Match]) -> bool:
+    """
+    处理 "决斗战绩" 命令
     
-#     匹配: 决斗战绩/我的战绩/战绩查询 [名字]
-#     """
-#     if not ctx.is_group:
-#         ctx.send_text("❌ 决斗战绩查询功能只支持群聊")
-#         return True
+    匹配: 决斗战绩/我的战绩/战绩查询 [名字]
+    """
+    if not ctx.is_group:
+        ctx.send_text("❌ 决斗战绩查询功能只支持群聊")
+        return True
     
-#     if not match:
-#         return False
+    if not match:
+        return False
     
-#     try:
-#         from function.func_duel import get_player_stats
+    try:
+        from function.func_duel import get_player_stats
         
-#         # 获取要查询的玩家
-#         player_name = ""
-#         if len(match.groups()) > 1 and match.group(2):
-#             player_name = match.group(2).strip()
+        # 获取要查询的玩家
+        player_name = ""
+        if len(match.groups()) > 1 and match.group(2):
+            player_name = match.group(2).strip()
         
-#         if not player_name:  # 如果没有指定名字，则查询发送者
-#             player_name = ctx.sender_name
+        if not player_name:  # 如果没有指定名字，则查询发送者
+            player_name = ctx.sender_name
         
-#         stats = get_player_stats(player_name, ctx.msg.roomid)
-#         ctx.send_text(stats)
+        stats = get_player_stats(player_name, ctx.msg.roomid)
+        ctx.send_text(stats)
         
-#         return True
-#     except Exception as e:
-#         if ctx.logger:
-#             ctx.logger.error(f"查询决斗战绩出错: {e}")
-#         ctx.send_text("⚠️ 查询战绩失败")
-#         return False
+        return True
+    except Exception as e:
+        if ctx.logger:
+            ctx.logger.error(f"查询决斗战绩出错: {e}")
+        ctx.send_text("⚠️ 查询战绩失败")
+        return False
 
-# def handle_check_equipment(ctx: 'MessageContext', match: Optional[Match]) -> bool:
-#     """
-#     处理 "查看装备" 命令
+def handle_check_equipment(ctx: 'MessageContext', match: Optional[Match]) -> bool:
+    """
+    处理 "查看装备" 命令
     
-#     匹配: 我的装备/查看装备
-#     """
-#     if not ctx.is_group:
-#         ctx.send_text("❌ 装备查看功能只支持群聊")
-#         return True
+    匹配: 我的装备/查看装备
+    """
+    if not ctx.is_group:
+        ctx.send_text("❌ 装备查看功能只支持群聊")
+        return True
     
-#     try:
-#         from function.func_duel import DuelRankSystem
+    try:
+        from function.func_duel import DuelRankSystem
         
-#         player_name = ctx.sender_name
-#         rank_system = DuelRankSystem(ctx.msg.roomid)
-#         player_data = rank_system.get_player_data(player_name)
+        player_name = ctx.sender_name
+        rank_system = DuelRankSystem(ctx.msg.roomid)
+        player_data = rank_system.get_player_data(player_name)
         
-#         if not player_data:
-#             ctx.send_text(f"⚠️ 没有找到 {player_name} 的数据")
-#             return True
+        if not player_data:
+            ctx.send_text(f"⚠️ 没有找到 {player_name} 的数据")
+            return True
         
-#         items = player_data.get("items", {"elder_wand": 0, "magic_stone": 0, "invisibility_cloak": 0})
-#         result = [
-#             f"🧙‍♂️ {player_name} 的魔法装备:",
-#             f"🪄 老魔杖: {items.get('elder_wand', 0)}次 ",
-#             f"💎 魔法石: {items.get('magic_stone', 0)}次",
-#             f"🧥 隐身衣: {items.get('invisibility_cloak', 0)}次 "
-#         ]
+        items = player_data.get("items", {"elder_wand": 0, "magic_stone": 0, "invisibility_cloak": 0})
+        result = [
+            f"🧙‍♂️ {player_name} 的魔法装备:",
+            f"🪄 老魔杖: {items.get('elder_wand', 0)}次 ",
+            f"💎 魔法石: {items.get('magic_stone', 0)}次",
+            f"🧥 隐身衣: {items.get('invisibility_cloak', 0)}次 "
+        ]
         
-#         ctx.send_text("\n".join(result))
+        ctx.send_text("\n".join(result))
         
-#         return True
-#     except Exception as e:
-#         if ctx.logger:
-#             ctx.logger.error(f"查看装备出错: {e}")
-#         ctx.send_text("⚠️ 查看装备失败")
-#         return False
+        return True
+    except Exception as e:
+        if ctx.logger:
+            ctx.logger.error(f"查看装备出错: {e}")
+        ctx.send_text("⚠️ 查看装备失败")
+        return False
 
-# def handle_rename(ctx: 'MessageContext', match: Optional[Match]) -> bool:
-#     """
-#     处理 "改名" 命令
+def handle_rename(ctx: 'MessageContext', match: Optional[Match]) -> bool:
+    """
+    处理 "改名" 命令
     
-#     匹配: 改名 旧名 新名
-#     """
-#     if not ctx.is_group:
-#         ctx.send_text("❌ 改名功能只支持群聊")
-#         return True
+    匹配: 改名 旧名 新名
+    """
+    if not ctx.is_group:
+        ctx.send_text("❌ 改名功能只支持群聊")
+        return True
     
-#     if not match or len(match.groups()) < 2:
-#         ctx.send_text("❌ 改名格式不正确，请使用: 改名 旧名 新名")
-#         return True
+    if not match or len(match.groups()) < 2:
+        ctx.send_text("❌ 改名格式不正确，请使用: 改名 旧名 新名")
+        return True
     
-#     old_name = match.group(1)
-#     new_name = match.group(2)
+    old_name = match.group(1)
+    new_name = match.group(2)
     
-#     if not old_name or not new_name:
-#         ctx.send_text("❌ 请提供有效的旧名和新名")
-#         return True
+    if not old_name or not new_name:
+        ctx.send_text("❌ 请提供有效的旧名和新名")
+        return True
     
-#     try:
-#         from function.func_duel import change_player_name
-#         result = change_player_name(old_name, new_name, ctx.msg.roomid)
-#         ctx.send_text(result)
+    try:
+        from function.func_duel import change_player_name
+        result = change_player_name(old_name, new_name, ctx.msg.roomid)
+        ctx.send_text(result)
         
-#         return True
-#     except Exception as e:
-#         if ctx.logger:
-#             ctx.logger.error(f"改名出错: {e}")
-#         ctx.send_text("⚠️ 改名失败")
-#         return False
+        return True
+    except Exception as e:
+        if ctx.logger:
+            ctx.logger.error(f"改名出错: {e}")
+        ctx.send_text("⚠️ 改名失败")
+        return False
