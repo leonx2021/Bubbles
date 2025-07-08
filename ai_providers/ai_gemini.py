@@ -57,8 +57,7 @@ class Gemini:
             transport = None
             if self._proxy:
                 try:
-                    proxies = {"http://": self._proxy, "https://": self._proxy}
-                    transport = httpx.HTTPTransport(proxy=proxies)
+                    transport = httpx.HTTPTransport(proxy=self._proxy)
                     self.LOG.info(f"Gemini 使用代理: {self._proxy}")
                 except Exception as proxy_err:
                     self.LOG.error(f"配置 Gemini 代理失败: {proxy_err}", exc_info=True)
