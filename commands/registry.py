@@ -120,66 +120,6 @@ COMMANDS = [
         description="骂指定用户"
     ),
     
-    # ======== 决斗系统命令 ========
-    Command(
-        name="duel",
-        pattern=re.compile(r"决斗.*?(?:@|[与和])\s*([^\s@]+)"),
-        scope="group",      # 仅群聊支持
-        need_at=False,      # 不需要@机器人
-        priority=50,        # 优先级较低
-        handler=handle_duel,
-        description="发起决斗"
-    ),
-    
-    Command(
-        name="sneak_attack",
-        pattern=re.compile(r"(?:偷袭|偷分).*?@([^\s@]+)"),
-        scope="group",      # 仅群聊支持
-        need_at=False,      # 不需要@机器人
-        priority=51,        # 优先级较低
-        handler=handle_sneak_attack,
-        description="偷袭其他玩家"
-    ),
-    
-    Command(
-        name="duel_rank",
-        pattern=re.compile(r"^(决斗排行|决斗排名|排行榜)$"),
-        scope="group",      # 仅群聊支持
-        need_at=True,      # 不需要@机器人
-        priority=52,        # 优先级较低
-        handler=handle_duel_rank,
-        description="查看决斗排行榜"
-    ),
-    
-    Command(
-        name="duel_stats",
-        pattern=re.compile(r"^(决斗战绩|我的战绩|战绩查询)(.*)$"),
-        scope="group",      # 仅群聊支持
-        need_at=True,      # 不需要@机器人
-        priority=53,        # 优先级较低
-        handler=handle_duel_stats,
-        description="查看决斗战绩"
-    ),
-    
-    Command(
-        name="check_equipment",
-        pattern=re.compile(r"^(我的装备|查看装备)$"),
-        scope="group",      # 仅群聊支持
-        need_at=True,      # 不需要@机器人
-        priority=54,        # 优先级较低
-        handler=handle_check_equipment,
-        description="查看我的装备"
-    ),
-    
-    Command(
-        name="rename",
-        pattern=re.compile(r"^改名\s+([^\s]+)\s+([^\s]+)$"),
-        scope="group",      # 仅群聊支持
-        need_at=True,      # 不需要@机器人
-        priority=55,        # 优先级较低
-        handler=handle_rename,
-        description="更改昵称"
-    ),
 ]
 
 # 可以添加一个函数，获取命令列表的简单描述
