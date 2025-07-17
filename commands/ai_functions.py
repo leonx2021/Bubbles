@@ -126,16 +126,13 @@ def ai_handle_reminder_set(ctx: MessageContext, params: str) -> bool:
     
     # 调用原有的提醒处理逻辑
     from .handlers import handle_reminder
-    # 构造一个假的match对象，因为AI路由不使用正则匹配
-    class FakeMatch:
-        def group(self, n):
-            return params
     
     # 临时修改消息内容以适配原有处理器
     original_content = ctx.msg.content
     ctx.msg.content = f"提醒我{params}"
     
-    result = handle_reminder(ctx, FakeMatch())
+    # handle_reminder不使用match参数，直接传None
+    result = handle_reminder(ctx, None)
     
     # 恢复原始内容
     ctx.msg.content = original_content
@@ -180,12 +177,8 @@ def ai_handle_reminder_delete(ctx: MessageContext, params: str) -> bool:
     original_content = ctx.msg.content
     ctx.msg.content = f"删除提醒 {params}"
     
-    # 构造假的match对象
-    class FakeMatch:
-        def group(self, n):
-            return params
-    
-    result = handle_delete_reminder(ctx, FakeMatch())
+    # handle_delete_reminder不使用match参数，直接传None
+    result = handle_delete_reminder(ctx, None)
     
     # 恢复原始内容
     ctx.msg.content = original_content
