@@ -34,6 +34,10 @@ from commands.router import CommandRouter
 from commands.registry import COMMANDS, get_commands_info
 from commands.handlers import handle_chitchat  # 导入闲聊处理函数
 
+# 导入AI路由系统
+from commands.ai_router import ai_router
+import commands.ai_functions  # 导入以注册所有AI功能
+
 __version__ = "39.2.4.0"
 
 
@@ -165,6 +169,9 @@ class Robot(Job):
         self.command_router = CommandRouter(COMMANDS, robot_instance=self)
         self.LOG.info(f"命令路由系统初始化完成，共加载 {len(COMMANDS)} 条命令")
         
+        # 初始化AI路由器
+        self.LOG.info(f"AI路由系统初始化完成，共加载 {len(ai_router.functions)} 个AI功能")
+        
         # 初始化提醒管理器
         try:
             # 使用与MessageSummary相同的数据库路径
@@ -208,16 +215,25 @@ class Robot(Job):
             # 5. 使用命令路由器分发处理消息
             handled = self.command_router.dispatch(ctx)
             
-            # 6. 如果没有命令处理器处理，则进行特殊逻辑处理
+            # 6. 如果正则路由器没有处理，尝试AI路由器
             if not handled:
-                # 6.1 好友请求自动处理
+                # 只在被@或私聊时才使用AI路由
+                if (msg.from_group() and msg.is_at(self.wxid)) or not msg.from_group():
+                    ai_handled = ai_router.dispatch(ctx)
+                    if ai_handled:
+                        self.LOG.info("消息已由AI路由器处理")
+                        return
+            
+            # 7. 如果没有命令处理器处理，则进行特殊逻辑处理
+            if not handled:
+                # 7.1 好友请求自动处理
                 if msg.type == 37:  # 好友请求
                     self.autoAcceptFriendRequest(msg)
                     return
                     
-                # 6.2 系统消息处理
+                # 7.2 系统消息处理
                 elif msg.type == 10000:
-                    # 6.2.1 处理新成员入群
+                    # 7.2.1 处理新成员入群
                     if "加入了群聊" in msg.content and msg.from_group():
                         new_member_match = re.search(r'"(.+?)"邀请"(.+?)"加入了群聊', msg.content)
                         if new_member_match:
@@ -228,12 +244,12 @@ class Robot(Job):
                             self.sendTextMsg(welcome_msg, msg.roomid)
                             self.LOG.info(f"已发送欢迎消息给新成员 {new_member} 在群 {msg.roomid}")
                         return
-                    # 6.2.2 处理新好友添加
+                    # 7.2.2 处理新好友添加
                     elif "你已添加了" in msg.content:
                         self.sayHiToNewFriend(msg)
                         return
                 
-                # 6.3 群聊消息，且配置了响应该群
+                # 7.3 群聊消息，且配置了响应该群
                 if msg.from_group() and msg.roomid in self.config.GROUPS:
                     # 如果在群里被@了，但命令路由器没有处理，则进行闲聊
                     if msg.is_at(self.wxid):
@@ -242,7 +258,7 @@ class Robot(Job):
                     else:
                         pass
                         
-                # 6.4 私聊消息，未被命令处理，进行闲聊
+                # 7.4 私聊消息，未被命令处理，进行闲聊
                 elif not msg.from_group() and not msg.from_self():
                     # 检查是否是文本消息(type 1)或者是包含用户输入的类型49消息
                     if msg.type == 1 or (msg.type == 49 and ctx.text):
