@@ -72,6 +72,42 @@ Bubbles 是一个功能丰富的微信机器人框架，基于 [wcferry](https:/
 - 支持自定义命令及参数
 - 预设 [多种实用和娱乐命令](#可用命令)
 
+##### 路由系统架构图
+
+```mermaid
+graph TD
+    A[用户消息] --> B{消息预处理}
+    B --> C{是否被@或私聊?}
+    
+    C -->|是| D[命令路由系统]
+    C -->|否| E[忽略消息]
+    
+    D --> F{正则匹配成功?}
+    F -->|是| G[执行对应命令处理器]
+    F -->|否| H[AI智能路由系统]
+    
+    H --> I[AI分析用户意图]
+    I --> J{匹配到功能?}
+    J -->|是| K[调用对应功能]
+    J -->|否| L[进入聊天模式]
+    
+    G --> M[返回处理结果]
+    K --> M
+    L --> N[AI自由对话]
+    N --> M
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style D fill:#bbf,stroke:#333,stroke-width:2px
+    style H fill:#bfb,stroke:#333,stroke-width:2px
+    style M fill:#fbb,stroke:#333,stroke-width:2px
+```
+
+消息处理流程说明：
+1. **消息预处理**：系统接收用户消息，判断是否需要响应
+2. **命令路由优先**：首先尝试使用正则表达式匹配已注册的命令
+3. **AI路由兜底**：如果没有匹配到命令，则使用AI分析用户意图
+4. **智能分发**：AI可以理解自然语言并调用相应功能，或进入聊天模式
+
 #### ⏰ 定时任务与提醒功能
 - 每日天气预报推送
 - 每日新闻资讯推送
@@ -243,6 +279,25 @@ Bubbles-WechatAI/
 ### ✨ 如何添加新功能
 
 本项目提供两种方式添加新功能：
+
+```mermaid
+graph LR
+    A[新功能] --> B{选择路由方式}
+    B --> C[命令路由]
+    B --> D[AI路由]
+    
+    C --> E[特点：精确匹配]
+    C --> F[适用：固定格式命令]
+    C --> G[例如：天气 北京]
+    
+    D --> H[特点：自然语言理解]
+    D --> I[适用：灵活表达]
+    D --> J[例如：北京天气怎么样]
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style C fill:#bbf,stroke:#333,stroke-width:2px
+    style D fill:#bfb,stroke:#333,stroke-width:2px
+```
 
 #### 方式一：使用命令路由系统（适合有明确触发词的功能）
 
