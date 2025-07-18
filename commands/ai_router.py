@@ -58,7 +58,7 @@ class AIRouter:
 可用的功能列表：
 """
         for name, func in self.functions.items():
-            prompt += f"\n{name}: {func.description}"
+            prompt += f"\n- {name}: {func.description}"
             if func.params_description:
                 prompt += f"\n  参数: {func.params_description}"
             if func.examples:
@@ -66,26 +66,30 @@ class AIRouter:
             prompt += "\n"
         
         prompt += """
-请分析用户输入，返回以下JSON格式之一：
+分析用户输入，严格按照以下格式返回JSON：
 
-1. 如果用户需要执行某个功能：
+如果用户需要使用上述功能之一，返回：
 {
     "action_type": "function",
-    "function_name": "功能名称",
-    "params": "提取并整理的参数"
+    "function_name": "上述功能列表中的功能名",
+    "params": "从用户输入中提取的参数"
 }
 
-2. 如果用户只是想聊天对话：
+如果用户只是聊天或者不匹配任何功能，返回：
 {
     "action_type": "chat"
 }
 
-重要提示：
-- 只返回JSON，不要有其他文字
-- action_type 必须是 "function" 或 "chat" 之一，不能是其他值
-- function_name必须是上述列表中的功能名之一
-- params是你从用户输入中提取和整理的参数字符串
-- 如果无法确定用户意图，默认返回chat
+示例：
+- 用户输入"北京天气怎么样" -> {"action_type": "function", "function_name": "weather_query", "params": "北京"}
+- 用户输入"看看新闻" -> {"action_type": "function", "function_name": "news_query", "params": ""}
+- 用户输入"你好" -> {"action_type": "chat"}
+- 用户输入"查一下Python教程" -> {"action_type": "function", "function_name": "perplexity_search", "params": "Python教程"}
+
+重要：
+1. action_type 只能是 "function" 或 "chat"
+2. 只返回JSON，无需其他解释
+3. function_name 必须完全匹配上述功能列表中的名称
 """
         return prompt
     
