@@ -75,25 +75,25 @@ Bubbles 是一个功能丰富的微信机器人框架，基于 [wcferry](https:/
 ##### 路由系统架构图
 
 ```mermaid
-graph TD
-    A[用户消息] --> B[消息预处理]
-    B --> C{是否被@或私聊}
+flowchart TD
+    A[User Message] --> B[Message Preprocessing]
+    B --> C{At Bot or Private Chat?}
     
-    C -->|是| D[命令路由系统]
-    C -->|否| E[忽略消息]
+    C -->|Yes| D[Command Router]
+    C -->|No| E[Ignore Message]
     
-    D --> F{正则匹配成功}
-    F -->|是| G[执行对应命令处理器]
-    F -->|否| H[AI智能路由系统]
+    D --> F{Regex Match?}
+    F -->|Yes| G[Execute Command Handler]
+    F -->|No| H[AI Router]
     
-    H --> I[AI分析用户意图]
-    I --> J{匹配到功能}
-    J -->|是| K[调用对应功能]
-    J -->|否| L[进入聊天模式]
+    H --> I[AI Analyze Intent]
+    I --> J{Function Match?}
+    J -->|Yes| K[Call Function]
+    J -->|No| L[Chat Mode]
     
-    G --> M[返回处理结果]
+    G --> M[Return Result]
     K --> M
-    L --> N[AI自由对话]
+    L --> N[AI Conversation]
     N --> M
     
     style A fill:#f9f,stroke:#333,stroke-width:2px
