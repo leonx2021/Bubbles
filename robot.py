@@ -219,10 +219,15 @@ class Robot(Job):
             if not handled:
                 # 只在被@或私聊时才使用AI路由
                 if (msg.from_group() and msg.is_at(self.wxid)) or not msg.from_group():
+                    print(f"[AI路由调试] 准备调用AI路由器处理消息: {msg.content}")
                     ai_handled = ai_router.dispatch(ctx)
+                    print(f"[AI路由调试] AI路由器处理结果: {ai_handled}")
                     if ai_handled:
                         self.LOG.info("消息已由AI路由器处理")
+                        print("[AI路由调试] 消息已成功由AI路由器处理")
                         return
+                    else:
+                        print("[AI路由调试] AI路由器未处理该消息")
             
             # 7. 如果没有命令处理器处理，则进行特殊逻辑处理
             if not handled:

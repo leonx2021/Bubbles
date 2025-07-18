@@ -72,7 +72,7 @@ def ai_handle_weather(ctx: MessageContext, params: str) -> bool:
 # ======== 新闻功能 ========
 @ai_router.register(
     name="news_query",
-    description="获取当日新闻资讯（很长的流水账，如果用户要精简的新闻则不用）",
+    description="获取当日新闻资讯",
     examples=[
         "看看今天的新闻",
         "有什么新闻吗",
@@ -188,7 +188,7 @@ def ai_handle_reminder_delete(ctx: MessageContext, params: str) -> bool:
 # ======== Perplexity搜索功能 ========
 @ai_router.register(
     name="perplexity_search",
-    description="使用Perplexity AI进行深度搜索和问答",
+    description="使用Perplexity AI进行深度搜索和问答，用于查询资料的场景",
     examples=[
         "搜索一下Python最新版本的特性",
         "帮我查查如何学习机器学习",

@@ -94,7 +94,10 @@ class AIRouter:
         
         返回: (是否处理成功, AI决策结果)
         """
+        print(f"[AI路由器] route方法被调用")
+        
         if not ctx.text:
+            print("[AI路由器] ctx.text为空，返回False")
             return False, None
             
         # 获取AI模型
@@ -103,20 +106,28 @@ class AIRouter:
             chat_model = getattr(ctx.robot, 'chat', None) if ctx.robot else None
             
         if not chat_model:
+            print("[AI路由器] 无可用的AI模型")
             self.logger.error("AI路由器：无可用的AI模型")
             return False, None
+        
+        print(f"[AI路由器] 找到AI模型: {type(chat_model)}")
         
         try:
             # 构建系统提示词
             system_prompt = self._build_ai_prompt()
+            print(f"[AI路由器] 已构建系统提示词，长度: {len(system_prompt)}")
             
             # 让AI分析用户意图
             user_input = f"用户输入：{ctx.text}"
+            print(f"[AI路由器] 准备调用AI分析意图: {user_input}")
+            
             ai_response = chat_model.get_answer(
                 user_input, 
                 wxid=ctx.get_receiver(),
                 system_prompt_override=system_prompt
             )
+            
+            print(f"[AI路由器] AI响应: {ai_response}")
             
             # 解析AI返回的JSON
             json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
@@ -155,9 +166,14 @@ class AIRouter:
         
         返回: 是否成功处理
         """
+        print(f"[AI路由器] dispatch被调用，消息内容: {ctx.text}")
+        
         # 获取AI路由决策
         success, decision = self.route(ctx)
+        print(f"[AI路由器] route返回 - success: {success}, decision: {decision}")
+        
         if not success or not decision:
+            print("[AI路由器] route失败或无决策，返回False")
             return False
         
         action_type = decision.get("action_type")
