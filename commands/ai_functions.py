@@ -14,7 +14,7 @@ from .context import MessageContext
 # ======== 天气功能 ========
 @ai_router.register(
     name="weather_query",
-    description="查询指定城市的天气情况和天气预报",
+    description="查询指定城市的天气情况和未来五天内的简略天气（非常简略，只能看到晴雨多云，如果需要更详细的天气预报，请使用perplexity搜索功能）",
     examples=[
         "北京天气怎么样",
         "查一下上海的天气",
@@ -72,7 +72,7 @@ def ai_handle_weather(ctx: MessageContext, params: str) -> bool:
 # ======== 新闻功能 ========
 @ai_router.register(
     name="news_query",
-    description="获取当日新闻资讯",
+    description="获取当日新闻资讯，非常长的流水账，如果用户要精简的新闻则不用",
     examples=[
         "看看今天的新闻",
         "有什么新闻吗",
