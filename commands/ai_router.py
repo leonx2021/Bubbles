@@ -82,6 +82,7 @@ class AIRouter:
 
 重要提示：
 - 只返回JSON，不要有其他文字
+- action_type 必须是 "function" 或 "chat" 之一，不能是其他值
 - function_name必须是上述列表中的功能名之一
 - params是你从用户输入中提取和整理的参数字符串
 - 如果无法确定用户意图，默认返回chat
