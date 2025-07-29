@@ -55,8 +55,13 @@ class AIRouter:
         """构建给AI的系统提示词，包含所有可用功能的信息"""
         prompt = """你是一个智能路由助手。根据用户的输入，判断用户的意图并返回JSON格式的响应。
 
-可用的功能列表：
-"""
+        ### 注意：
+        1. 你需要优先判断自己是否可以直接回答用户的问题，如果你可以直接回答，则返回 "chat"，无需返回 "function"
+        2. 如果用户输入中包含多个功能，请优先匹配最符合用户意图的功能。如果无法判断，则返回 "chat"。
+        3. 优先考虑使用 chat 处理，需要外部资料或其他功能逻辑时，再返回 "function"。
+
+        ### 可用的功能列表：
+        """
         for name, func in self.functions.items():
             prompt += f"\n- {name}: {func.description}"
             if func.params_description:
@@ -66,31 +71,33 @@ class AIRouter:
             prompt += "\n"
         
         prompt += """
-分析用户输入，严格按照以下格式返回JSON：
+        请你分析用户输入，严格按照以下格式返回JSON：
 
-如果用户需要使用上述功能之一，返回：
-{
-    "action_type": "function",
-    "function_name": "上述功能列表中的功能名",
-    "params": "从用户输入中提取的参数"
-}
+        ### 返回格式：
 
-如果用户只是聊天或者不匹配任何功能，返回：
-{
-    "action_type": "chat"
-}
+        1. 如果用户只是聊天或者不匹配任何功能，返回：
+        {
+            "action_type": "chat"
+        }
+        
+        2.如果用户需要使用上述功能之一，返回：
+        {
+            "action_type": "function",
+            "function_name": "上述功能列表中的功能名",
+            "params": "从用户输入中提取的参数"
+        }
 
-示例：
-- 用户输入"北京天气怎么样" -> {"action_type": "function", "function_name": "weather_query", "params": "北京"}
-- 用户输入"看看新闻" -> {"action_type": "function", "function_name": "news_query", "params": ""}
-- 用户输入"你好" -> {"action_type": "chat"}
-- 用户输入"查一下Python教程" -> {"action_type": "function", "function_name": "perplexity_search", "params": "Python教程"}
+        #### 示例：
+        - 用户输入"北京天气怎么样" -> {"action_type": "function", "function_name": "weather_query", "params": "北京"}
+        - 用户输入"看看新闻" -> {"action_type": "function", "function_name": "news_query", "params": ""}
+        - 用户输入"你好" -> {"action_type": "chat"}
+        - 用户输入"查一下Python教程" -> {"action_type": "function", "function_name": "perplexity_search", "params": "Python教程"}
 
-重要：
-1. action_type 只能是 "function" 或 "chat"
-2. 只返回JSON，无需其他解释
-3. function_name 必须完全匹配上述功能列表中的名称
-"""
+        #### 格式注意事项：
+        1. action_type 只能是 "function" 或 "chat"
+        2. 只返回JSON，无需其他解释
+        3. function_name 必须完全匹配上述功能列表中的名称
+        """
         return prompt
     
     def route(self, ctx: MessageContext) -> Tuple[bool, Optional[Dict[str, Any]]]:
