@@ -1,112 +1,171 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import signal
-import logging
-import sys  # 导入 sys 模块
+"""
+全新的微信机器人启动入口
+"""
+
+import sys
 import os
+import logging
 from argparse import ArgumentParser
+from pathlib import Path
 
-# 确保日志目录存在
-log_dir = "logs"
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
+# 添加项目根目录到 Python 路径
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
 
-# 配置 logging
-log_format = '%(asctime)s - %(levelname)s - %(name)s - %(message)s'
-logging.basicConfig(
-    level=logging.WARNING,  # 提高默认日志级别为 WARNING，只显示警告和错误信息
-    format=log_format,
-    handlers=[
-        # logging.FileHandler(os.path.join(log_dir, "app.log"), encoding='utf-8'), # 将所有日志写入文件
-        # logging.StreamHandler(sys.stdout) # 同时输出到控制台
-    ]
-)
+from bot import WeChatBot
 
-# 为特定模块设置更具体的日志级别
-logging.getLogger("requests").setLevel(logging.ERROR)  # 提高为 ERROR
-logging.getLogger("urllib3").setLevel(logging.ERROR)   # 提高为 ERROR
-logging.getLogger("httpx").setLevel(logging.ERROR)     # 提高为 ERROR
+__version__ = "2.0.0"
 
-# 常见的自定义模块日志设置，按需修改
-logging.getLogger("Weather").setLevel(logging.WARNING)
-logging.getLogger("ai_providers").setLevel(logging.WARNING)
-logging.getLogger("commands").setLevel(logging.WARNING)
-# 临时调试：为AI路由器设置更详细的日志级别
-logging.getLogger("commands.ai_router").setLevel(logging.INFO)
 
-from function.func_report_reminder import ReportReminder
-from configuration import Config
-from constants import ChatType
-from robot import Robot, __version__
-from wcferry import Wcf
-
-def main(chat_type: int):
-    config = Config()
-    wcf = Wcf(debug=False)  # 将 debug 设置为 False 减少 wcf 的调试输出
+def setup_logging(level: str = "INFO"):
+    """设置日志"""
+    # 创建日志目录
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
     
-    # 定义全局变量robot，使其在handler中可访问
-    global robot
-    robot = Robot(config, wcf, chat_type)
+    # 日志级别映射
+    level_map = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR
+    }
+    
+    log_level = level_map.get(level.upper(), logging.INFO)
+    
+    # 配置日志格式
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    
+    # 设置根日志器
+    logging.basicConfig(
+        level=log_level,
+        format=log_format,
+        handlers=[
+            logging.FileHandler(log_dir / "bot.log", encoding='utf-8'),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    
+    # 设置第三方库日志级别
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
-    def handler(sig, frame):
-        # 先清理机器人资源（包括关闭数据库连接）
-        if 'robot' in globals() and robot:
-            robot.LOG.info("程序退出，开始清理资源...")
-            robot.cleanup()
-            
-        # 再清理wcf环境
-        wcf.cleanup()  # 退出前清理环境
-        exit(0)
 
-    signal.signal(signal.SIGINT, handler)
+def create_default_config():
+    """创建默认配置文件"""
+    config_content = """# 微信机器人配置文件
 
-    robot.LOG.info(f"WeChatRobot【{__version__}】成功启动···")
+# 基础配置
+bot_name: "智能助手"
+admin_users:
+  - "your_admin_wxid_here"
 
-    # # 机器人启动发送测试消息
-    # robot.sendTextMsg("机器人启动成功！", "filehelper")
+# AI模型配置
+ai_models:
+  chatgpt:
+    enabled: true
+    api_key: "your_openai_api_key"
+    base_url: "https://api.openai.com/v1"
+    model: "gpt-3.5-turbo"
+    temperature: 0.7
+    max_tokens: 2000
+    timeout: 30
+  
+  deepseek:
+    enabled: false
+    api_key: "your_deepseek_api_key"
+    base_url: "https://api.deepseek.com/v1"
+    model: "deepseek-chat"
+    temperature: 0.7
+    max_tokens: 2000
+    timeout: 30
 
-    # 接收消息
-    # robot.enableRecvMsg()     # 可能会丢消息？
-    robot.enableReceivingMsg()  # 加队列
+default_ai_model: "chatgpt"
 
-    # 每天 7 点发送天气预报
-    robot.onEveryTime("07:00", robot.weatherReport)
+# 群组配置
+groups:
+  # "group_id_1":
+  #   name: "测试群"
+  #   enabled: true
+  #   ai_model: "chatgpt"
+  #   max_history: 50
+  #   auto_reply: true
 
-    # 每天 7:30 发送新闻
-    robot.onEveryTime("07:30", robot.newsReport)
+# 消息配置
+message_rate_limit: 30  # 每分钟最多发送30条消息
+auto_accept_friends: false
+welcome_message: "欢迎 {name} 加入群聊！"
 
-    # 每天 16:30 提醒发日报周报月报
-    robot.onEveryTime("17:00", ReportReminder.remind, robot=robot)
+# 数据库配置
+database_url: "sqlite:///data/bot.db"
+max_history_days: 30
 
-    # 让机器人一直跑
-    robot.keepRunningAndBlockProcess()
+# 插件配置
+plugins_enabled:
+  - "weather_plugin"
+  - "news_plugin"
+
+plugin_configs: {}
+
+# 定时任务配置
+scheduled_tasks: {}
+"""
+    
+    with open("config.yaml", "w", encoding="utf-8") as f:
+        f.write(config_content)
+    
+    print("已创建默认配置文件 config.yaml")
+    print("请编辑配置文件后重新启动")
+
+
+def main():
+    parser = ArgumentParser(description=f"微信机器人 v{__version__}")
+    parser.add_argument('-c', '--config', default='config.yaml', help='配置文件路径')
+    parser.add_argument('-l', '--log-level', default='INFO', 
+                       choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+                       help='日志级别')
+    parser.add_argument('--create-config', action='store_true', help='创建默认配置文件')
+    
+    args = parser.parse_args()
+    
+    # 创建默认配置
+    if args.create_config:
+        create_default_config()
+        return
+    
+    # 检查配置文件
+    if not Path(args.config).exists():
+        print(f"配置文件 {args.config} 不存在")
+        print("使用 --create-config 创建默认配置文件")
+        return
+    
+    # 设置日志
+    setup_logging(args.log_level)
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"微信机器人 v{__version__} 启动中...")
+    
+    try:
+        # 创建并启动机器人
+        bot = WeChatBot(args.config)
+        
+        logger.info("机器人启动成功，按 Ctrl+C 停止")
+        
+        # 运行机器人
+        bot.run()
+        
+    except KeyboardInterrupt:
+        logger.info("用户中断，正在停止...")
+    except Exception as e:
+        logger.error(f"机器人运行出错: {e}", exc_info=True)
+        sys.exit(1)
+    
+    logger.info("机器人已停止")
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument('-c', type=int, default=0, 
-                        help=f'选择默认模型参数序号: {ChatType.help_hint()}（可通过配置文件为不同群指定模型）')
-    parser.add_argument('-d', '--debug', action='store_true',
-                        help='启用调试模式，输出更详细的日志信息')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='安静模式，只输出错误信息')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='详细输出模式，显示所有信息日志')
-    args = parser.parse_args()
-    
-    # 处理日志级别参数
-    if args.debug:
-        # 调试模式优先级最高
-        logging.getLogger().setLevel(logging.DEBUG)
-        print("已启用调试模式，将显示所有详细日志信息")
-    elif args.quiet:
-        # 安静模式，控制台只显示错误
-        logging.getLogger().setLevel(logging.ERROR)
-        print("已启用安静模式，控制台只显示错误信息")
-    elif args.verbose:
-        # 详细模式，显示所有 INFO 级别日志
-        logging.getLogger().setLevel(logging.INFO)
-        print("已启用详细模式，将显示所有信息日志")
-    
-    main(args.c)
+    main()
