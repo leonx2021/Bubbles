@@ -172,6 +172,34 @@ class AIRouter:
             self.logger.error(f"AI路由器：处理异常 - {e}")
             return False, None
     
+    def _check_permission(self, ctx: MessageContext) -> bool:
+        """
+        检查是否有权限使用AI路由功能
+        
+        :param ctx: 消息上下文
+        :return: 是否有权限
+        """
+        # 检查是否启用AI路由
+        ai_router_config = getattr(ctx.config, 'AI_ROUTER', {})
+        if not ai_router_config.get('enable', True):
+            self.logger.info("AI路由功能已禁用")
+            return False
+        
+        # 私聊始终允许
+        if not ctx.is_group:
+            return True
+        
+        # 群聊需要检查白名单
+        allowed_groups = ai_router_config.get('allowed_groups', [])
+        current_group = ctx.get_receiver()
+        
+        if current_group in allowed_groups:
+            self.logger.info(f"群聊 {current_group} 在AI路由白名单中，允许使用")
+            return True
+        else:
+            self.logger.info(f"群聊 {current_group} 不在AI路由白名单中，禁止使用")
+            return False
+
     def dispatch(self, ctx: MessageContext) -> bool:
         """
         执行AI路由分发
@@ -179,6 +207,11 @@ class AIRouter:
         返回: 是否成功处理
         """
         print(f"[AI路由器] dispatch被调用，消息内容: {ctx.text}")
+        
+        # 检查权限
+        if not self._check_permission(ctx):
+            print("[AI路由器] 权限检查失败，返回False")
+            return False
         
         # 获取AI路由决策
         success, decision = self.route(ctx)
