@@ -14,14 +14,8 @@ from .context import MessageContext
 # ======== 天气功能 ========
 @ai_router.register(
     name="weather_query",
-    description="查询指定城市的天气情况和未来五天内的简略天气（非常简略，只能看到晴雨多云，如果需要更详细的天气预报，请使用perplexity搜索功能）",
-    examples=[
-        "北京天气怎么样",
-        "查一下上海的天气",
-        "明天深圳会下雨吗",
-        "杭州天气预报",
-        "广州未来几天的天气"
-    ],
+    description="查询城市未来五天的简要天气预报",
+    examples=["北京天气怎么样", "上海天气"],
     params_description="城市名称"
 )
 def ai_handle_weather(ctx: MessageContext, params: str) -> bool:
@@ -72,14 +66,8 @@ def ai_handle_weather(ctx: MessageContext, params: str) -> bool:
 # ======== 新闻功能 ========
 @ai_router.register(
     name="news_query",
-    description="获取当日新闻资讯，非常长的流水账，如果用户要精简的新闻则不用",
-    examples=[
-        "看看今天的新闻",
-        "有什么新闻吗",
-        "最近发生了什么事",
-        "今日要闻",
-        "给我看看新闻"
-    ],
+    description="获取今日新闻",
+    examples=["看看今天的新闻", "今日要闻"],
     params_description="无需参数"
 )
 def ai_handle_news(ctx: MessageContext, params: str) -> bool:
@@ -107,15 +95,9 @@ def ai_handle_news(ctx: MessageContext, params: str) -> bool:
 # ======== 提醒功能 ========
 @ai_router.register(
     name="reminder_set",
-    description="设置提醒，支持一次性提醒、每日提醒、每周提醒",
-    examples=[
-        "提醒我明天下午3点开会",
-        "每天早上8点提醒我吃早餐",
-        "每周一提醒我周会",
-        "下午5点提醒我下班",
-        "设置一个提醒：周五下午检查周报"
-    ],
-    params_description="提醒的时间和内容描述"
+    description="设置提醒",
+    examples=["提醒我明天下午3点开会", "每天早上8点提醒我吃早餐"],
+    params_description="时间和内容"
 )
 def ai_handle_reminder_set(ctx: MessageContext, params: str) -> bool:
     """AI路由的提醒设置处理"""
@@ -141,14 +123,8 @@ def ai_handle_reminder_set(ctx: MessageContext, params: str) -> bool:
 
 @ai_router.register(
     name="reminder_list",
-    description="查看已设置的所有提醒",
-    examples=[
-        "查看我的提醒",
-        "我有哪些提醒",
-        "显示提醒列表",
-        "我设置了什么提醒",
-        "看看我的提醒"
-    ],
+    description="查看所有提醒",
+    examples=["查看我的提醒", "我有哪些提醒"],
     params_description="无需参数"
 )
 def ai_handle_reminder_list(ctx: MessageContext, params: str) -> bool:
@@ -158,15 +134,9 @@ def ai_handle_reminder_list(ctx: MessageContext, params: str) -> bool:
 
 @ai_router.register(
     name="reminder_delete",
-    description="删除已设置的提醒",
-    examples=[
-        "删除开会的提醒",
-        "取消明天的提醒",
-        "把早餐提醒删了",
-        "删除所有提醒",
-        "取消周会提醒"
-    ],
-    params_description="要删除的提醒描述或ID"
+    description="删除提醒",
+    examples=["删除开会的提醒", "取消明天的提醒"],
+    params_description="提醒描述"
 )
 def ai_handle_reminder_delete(ctx: MessageContext, params: str) -> bool:
     """AI路由的提醒删除处理"""
@@ -188,15 +158,9 @@ def ai_handle_reminder_delete(ctx: MessageContext, params: str) -> bool:
 # ======== Perplexity搜索功能 ========
 @ai_router.register(
     name="perplexity_search",
-    description="使用Perplexity AI进行深度研究，仅用于需要查询资料进行深度研究的场景",
-    examples=[
-        "搜索一下Python最新版本的特性",
-        "帮我查查如何学习机器学习",
-        "查找关于量子计算的最新进展",
-        "搜索健康饮食的建议",
-        "了解一下区块链技术"
-    ],
-    params_description="搜索查询内容"
+    description="搜索查询资料并深度研究某个专业问题",
+    examples=["搜索Python最新特性", "查查机器学习教程"],
+    params_description="搜索内容"
 )
 def ai_handle_perplexity(ctx: MessageContext, params: str) -> bool:
     """AI路由的Perplexity搜索处理"""
